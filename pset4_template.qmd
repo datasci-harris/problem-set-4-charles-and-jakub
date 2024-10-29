@@ -25,7 +25,31 @@ include-before-body:
 
 ## Download and explore the Provider of Services (POS) file (10 pts)
 
-1. 
+```{python}
+import chardet
+with open('other_data_Q3_2024.csv', 'rb') as f:
+    result = chardet.detect(f.read())
+print(result)  # Shows detected encoding
+df = pd.read_csv('other_data_Q3_2024.csv', encoding=result['encoding'])
+
+
+```
+
+(Note: Used ChatGPT to troubleshoot why pd.read_csv wasn't working- learned to specify a different encoding other than utf-8)
+
+```{python}
+import pandas as pd
+df = pd.read_csv('other_data_Q3_2024.csv', encoding='Windows-1252', low_memory=False)
+
+
+df.head(5)
+
+
+```
+
+
+1. Which variables do we need to complete the exercise:
+- 
 2. 
     a.
     b.
