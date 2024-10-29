@@ -40,11 +40,12 @@ include-before-body:
   -Facility Zip (ZIP_CD)
 
 2. 
-    a. Import the pos2016.csv file:
+    a. Import the pos2016.csv file and subset it:
 ```{python}
 import pandas as pd
 df = pd.read_csv('pos2016.csv', encoding='Windows-1252', low_memory=False)
 
+df = df.rename(co)
 
 df.head(5)
 
