@@ -43,14 +43,18 @@ include-before-body:
     a. Import the pos2016.csv file and subset it:
 ```{python}
 import pandas as pd
-df = pd.read_csv('pos2016.csv', encoding='Windows-1252', low_memory=False)
+df = pd.read_csv('pos_2016.csv', encoding='Windows-1252', low_memory=False)
 
-df.columns = 
+df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date", "facility_name", "prvdr_num", "termination_code", "zip_code"]
 
 df.head(5)
 
-```
+df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
 
+```
+After subsetting to only short-term hospitals with these codes, we find 7245 hospitals in our data set. The provided KFF article cites a number of "nearly 5000".
+
+This discrepancy could be due to potential duplicates in our data (if a hospital was acquired or merged into a newer hospital, it may be counted twice). Additionally, our data may include hospitals that are short-term hospitals, but not specifically acute-care hospitals providing emergency care/surgery and other interventions, which the KFF article might exclude.
 
     b.
 3. 
