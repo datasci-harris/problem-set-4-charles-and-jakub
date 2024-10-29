@@ -25,33 +25,32 @@ include-before-body:
 
 ## Download and explore the Provider of Services (POS) file (10 pts)
 
-```{python}
-import chardet
-with open('other_data_Q3_2024.csv', 'rb') as f:
-    result = chardet.detect(f.read())
-print(result)  # Shows detected encoding
-df = pd.read_csv('other_data_Q3_2024.csv', encoding=result['encoding'])
-
-
-```
-
 (Note: Used ChatGPT to troubleshoot why pd.read_csv wasn't working- learned to specify a different encoding other than utf-8)
 
+
+1. Which variables do we need to complete the exercise:
+- Short-term hospitals
+  -Certification Date (CRTFCTN_DT)
+  -Change of ownership date (CHOW_DT)
+  -Provider code 1 (PRVDR_CTGRY_CD)
+  -subtype 1 (PRVDR_CTGRY_SBTYP_CD)
+  -CMS Certification number (PRVDR_NUM)
+  -Termination Code (PGM_TRMNTN_CD)
+  -Facility Name (FAC_NAME)
+  -Facility Zip (ZIP_CD)
+
+2. 
+    a. Import the pos2016.csv file:
 ```{python}
 import pandas as pd
-df = pd.read_csv('other_data_Q3_2024.csv', encoding='Windows-1252', low_memory=False)
+df = pd.read_csv('pos2016.csv', encoding='Windows-1252', low_memory=False)
 
 
 df.head(5)
 
-
 ```
 
 
-1. Which variables do we need to complete the exercise:
-- 
-2. 
-    a.
     b.
 3. 
 4. 
@@ -59,6 +58,10 @@ df.head(5)
     b.
 
 ## Identify hospital closures in POS file (15 pts) (*)
+
+```{python}
+import geopandas
+```
 
 1. 
 2. 
