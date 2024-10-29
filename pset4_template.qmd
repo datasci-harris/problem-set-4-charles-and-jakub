@@ -45,7 +45,7 @@ include-before-body:
 import pandas as pd
 df = pd.read_csv('pos2016.csv', encoding='Windows-1252', low_memory=False)
 
-df = df.rename(co)
+df.columns = 
 
 df.head(5)
 
