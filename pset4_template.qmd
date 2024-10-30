@@ -95,9 +95,9 @@ Now we plot the # of observations in the dataset by year of certification date:
 
 ```{python}
 
-observations_by_year = df_all.alt.Chart().mark_point.encode(
-  x = alt.X('year')
-)
+# observations_by_year = df_all.alt.Chart().mark_point.encode(
+#   x = alt.X('year')
+# )
 # The above doesn't run
 ```
 
@@ -142,19 +142,18 @@ df_terms = df_terms.rename(
     'zip_code': 'zip_code_2016'})
 df_terms = df_terms[df_terms['termination_code_2016'] == 0]
 
-# Filter to find only those who closed throughout the years
+# Filter to find only those who closed sometime throughout the years
 df_16_19_closures = df_terms[
     (df_terms['termination_code_2017'] != 0) |
     (df_terms['termination_code_2018'] != 0) |
     (df_terms['termination_code_2019'] != 0)]
 
-# Function to find closure year, or nan if not closed
+# Function to find closure year for each hospital
 def closure_year(row):
     for year in range(2017, 2020):
         termination_code = row[f'termination_code_{year}']
         if termination_code != 0:
             return year
-    return np.nan
 
 # Apply the function (found .apply() on stackoverflow
 # https://stackoverflow.com/questions/19914937/applying-function-
@@ -167,27 +166,55 @@ print(len(df_16_19_closures))
 
 ```
 
-There are 174 hospitals that fit this definition, but it's worth noting that some of the hospitals close and then reopen. Some of the reopenings are under different names, but with the same provider code. 
+There are 174 hospitals that fit this definition, but it's worth noting that some of the hospitals close and then reopen. Some of the reopenings are under different names but with the same provider code, and some are enitrely different. 
 
 2. Sort by name and report first 10.
 
 ```{python}
 
-df_2_2 = df_16_19_closures[['facility_name', 'prvdr_num',
-                            'termination_code_2016',
-                            'termination_code_2017',
-                            'termination_code_2018',
-                            'termination_code_2019']]
+df_2_2 = df_16_19_closures[['facility_name', 
+                            'closure_year']]
                             
 print(df_2_2.sort_values(by='facility_name').head(10))
 
 ```
 
-3. Remove closures in ZIPs where number of closures doesnt decrease
+3. Remove closures in ZIPs where number of active hospitals doesnt decrease
 
 ```{python}
 
+active_counts_by_zip = {}
 
+# Loop through each year and count active hospitals by ZIP code
+for year in range(2016, 2020):
+    active_hospitals = df_16_19_closures[df_16_19_closures[f'termination_code_{
+        year}'] == 0]
+    active_counts = active_hospitals.groupby(
+        'zip_code_2016').size().reset_index(name=f'active_hospitals_{year}')
+    active_counts_by_zip[year] = active_counts
+
+# Merge active hospital counts on zip code, missing implies closed, so 0 count
+active_hospitals_by_year = active_counts_by_zip[2016]
+for year in range(2017, 2020):
+    active_hospitals_by_year = active_hospitals_by_year.merge(
+        active_counts_by_zip[year], on='zip_code_2016', how='outer')
+active_hospitals_by_year = active_hospitals_by_year.fillna(0)
+
+# We can't use 2016 or 2020, so find 17-18 and 18-19
+active_hospitals_by_year['change_2017_2018'] = active_hospitals_by_year[
+    'active_hospitals_2018'] - active_hospitals_by_year['active_hospitals_2017']
+active_hospitals_by_year['change_2018_2019'] = active_hospitals_by_year[
+    'active_hospitals_2019'] - active_hospitals_by_year['active_hospitals_2018']
+
+# This contains only hospitals that 'closed' in 17 or 18
+df_17_closures = df_16_19_closures[df_16_19_closures['closure_year'] == 2017]
+df_18_closures = df_16_19_closures[df_16_19_closures['closure_year'] == 2018]
+
+df_change_17_18 = active_hospitals_by_year[active_hospitals_by_year['change_2017_2018'] == 0]
+df_change_18_19 = active_hospitals_by_year[active_hospitals_by_year['change_2018_2019'] == 0]
+
+df_17_no_change = df_17_closures[~df_17_closures['zip_code_2016'].isin(df_change_17_18['zip_code_2016'])]
+df_18_no_change = df_18_closures[~df_18_closures['zip_code_2016'].isin(df_change_18_19['zip_code_2016'])]
 
 ```
 
