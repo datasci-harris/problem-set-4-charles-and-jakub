@@ -47,7 +47,10 @@ df = pd.read_csv('pos_2016.csv', encoding='Windows-1252', low_memory=False)
 
 df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date", "facility_name", "prvdr_num", "termination_code", "zip_code"]
 
-df.head(5)
+#The date fields are numbers, so we need to change the numbers in the date fields to strings and then date objects. Attribution: Used ChatGPT to assist with regex issues
+df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
+
+df['certification_date'] = pd.to_datetime(df['certification_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
 df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
 
@@ -62,11 +65,16 @@ This discrepancy could be due to potential duplicates in our data (if a hospital
 ```{python}
 
 def read_clean_filter(pathname):
-  """Reads the raw csv files from CMS, renames the columns, and filters to only short term hospitals
+  """Reads the raw csv files from CMS, renames the columns, and filters to only short term hospitals.
+  Also updates the date columns to pd.datetime format
   """
   df = pd.read_csv(pathname, encoding='Windows-1252', low_memory=False)
 
   df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date", "facility_name", "prvdr_num", "termination_code", "zip_code"]
+  
+  df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
+
+  df['certification_date'] = pd.to_datetime(df['certification_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
   df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
 
@@ -83,7 +91,15 @@ df_all = pd.concat([df, df_2017, df_2018, df_2019], ignore_index=True)
 
 ```
 
+Now we plot the # of observations in the dataset by year of certification date:
 
+```{python}
+
+observations_by_year = df_all.alt.Chart().mark_point.encode(
+  x = alt.X('year')
+)
+
+```
 
 
 
