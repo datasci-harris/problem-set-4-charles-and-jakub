@@ -54,6 +54,9 @@ df['certification_date'] = pd.to_datetime(df['certification_date'].astype(str).s
 
 df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
 
+#We also need to change the zip codes from numbers to strings for later
+df['numeric_column'] = df['numeric_column'].astype(str)
+
 ```
 
   b. After subsetting to only short-term hospitals with these codes, we find 7245 hospitals in our data set. The provided KFF article cites a number of "nearly 5000".
@@ -176,6 +179,9 @@ Now we calculate the # of hospitals per zip code in 2016 based on the previous s
 
 import shapely
 from shapely import Polygon, Point
+
+#We need to merge our previous hospital data with the shapefile zip_codes data:
+
 ```
 
 ## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
