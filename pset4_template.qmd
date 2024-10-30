@@ -1,5 +1,5 @@
 ---
-title: "Your Title"
+title: "Problem Set 4: Spatial"
 format: 
   pdf:
     keep-tex: true
@@ -98,11 +98,8 @@ Now we plot the # of observations in the dataset by year of certification date:
 observations_by_year = df_all.alt.Chart().mark_point.encode(
   x = alt.X('year')
 )
-
+# The above doesn't run
 ```
-
-
-
 
 4. 
     a.
@@ -111,15 +108,91 @@ observations_by_year = df_all.alt.Chart().mark_point.encode(
 ## Identify hospital closures in POS file (15 pts) (*)
 
 ```{python}
+
 import geopandas
+import numpy as np
+
 ```
 
-1. 
-2. 
-3. 
+1. Create a list of hospitals active in 2016, closed by 2019 (facility name, zip, year of closure). How many are there?
+
+```{python}
+
+# Create temporary, smaller dataframes for this purpose
+df_2016_temp = df[['facility_name', 'prvdr_num',
+                   'zip_code', 'termination_code']]
+df_2017_temp = df_2017[['facility_name',
+                        'prvdr_num', 'zip_code', 'termination_code']]
+df_2018_temp = df_2018[['facility_name',
+                        'prvdr_num', 'zip_code', 'termination_code']]
+df_2019_temp = df_2019[['facility_name',
+                        'prvdr_num', 'zip_code', 'termination_code']]
+
+# Merge them on provider number to have all the term codes together by year
+df_terms = df_2016_temp.merge(df_2017_temp, on=['prvdr_num'],
+                              how='outer', suffixes=('', '_2017')
+                              ).merge(df_2018_temp, on=['prvdr_num'],
+                                      how='outer', suffixes=('', '_2018')
+                                      ).merge(df_2019_temp, on=['prvdr_num'],
+                                              how='outer', suffixes=('', '_2019'))
+
+# Rename 2016 column & filter for only those active in 2016
+df_terms = df_terms.rename(
+    columns={'termination_code': 'termination_code_2016', 
+    'zip_code': 'zip_code_2016'})
+df_terms = df_terms[df_terms['termination_code_2016'] == 0]
+
+# Filter to find only those who closed throughout the years
+df_16_19_closures = df_terms[
+    (df_terms['termination_code_2017'] != 0) |
+    (df_terms['termination_code_2018'] != 0) |
+    (df_terms['termination_code_2019'] != 0)]
+
+# Function to find closure year, or nan if not closed
+def closure_year(row):
+    for year in range(2017, 2020):
+        termination_code = row[f'termination_code_{year}']
+        if termination_code != 0:
+            return year
+    return np.nan
+
+# Apply the function (found .apply() on stackoverflow
+# https://stackoverflow.com/questions/19914937/applying-function-
+# with-multiple-arguments-to-create-a-new-pandas-column)
+df_16_19_closures['closure_year'] = df_16_19_closures.apply(
+    closure_year, axis=1)
+
+# Find how many
+print(len(df_16_19_closures))
+
+```
+
+There are 174 hospitals that fit this definition, but it's worth noting that some of the hospitals close and then reopen. Some of the reopenings are under different names, but with the same provider code. 
+
+2. Sort by name and report first 10.
+
+```{python}
+
+df_2_2 = df_16_19_closures[['facility_name', 'prvdr_num',
+                            'termination_code_2016',
+                            'termination_code_2017',
+                            'termination_code_2018',
+                            'termination_code_2019']]
+                            
+print(df_2_2.sort_values(by='facility_name').head(10))
+
+```
+
+3. Remove closures in ZIPs where number of closures doesnt decrease
+
+```{python}
+
+
+
+```
+
     a.
     b.
-    c.
 
 ## Download Census zip code shapefile (10 pt) 
 
