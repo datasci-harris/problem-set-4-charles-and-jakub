@@ -135,9 +135,6 @@ b. Not only are the plots different, we can see two things:
 
 ## Identify hospital closures in POS file (15 pts) (*)
 
-```{python}
-import geopandas
-```
 
 1. 
 2. 
@@ -149,9 +146,37 @@ import geopandas
 ## Download Census zip code shapefile (10 pt) 
 
 1. 
-    a.
-    b. 
-2. 
+    a. The five file types are:
+      1. .shp - The file that contains the actual geoms (points, lines, polygons) that will be displayed
+      2. .dbf - Stores attribute data for each shape in the .shp file, like population, income, temperature, etc. 
+      3. .shx - An index file that points to specific shapes in the .shp file for easier navigation
+      4. .prj - A projection file that stores the coordinate information for latitude/longitude 
+      5. .xml - Metadata file that is mostly used for documentation/readme purposes, including data sources, attributes, etc.
+    b. The .shp file is the largest at 837.5 MB, while the other files are:
+      .dbf - 6.4 MB
+      .shx - 0.26 MB
+      .xml - 16 KB
+      .prj - 0.16 KB
+2. To open the shapefile, we will install and use geopandas:
+
+```{python}
+import geopandas as gpd
+zip_codes = gpd.read_file("/Users/charleshuang/Downloads/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shp")
+
+#Texas zip codes always start with 75, 76, or 77, and ZCTA5 is the column with the zip codes
+#Used ChatGPT to find a function that can identify strings by the first few characters
+tx_zip_codes = zip_codes[zip_codes["ZCTA5"].str.startswith(('75', '76', '77'))]
+
+print(tx_zip_codes.head())
+```
+
+Now we calculate the # of hospitals per zip code in 2016 based on the previous step:
+
+```{python}
+
+import shapely
+from shapely import Polygon, Point
+```
 
 ## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
 
