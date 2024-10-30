@@ -1,5 +1,5 @@
 ---
-title: "Problem Set 4: Spatial"
+title: "Your Title"
 format: 
   pdf:
     keep-tex: true
@@ -41,28 +41,21 @@ include-before-body:
 
 2. 
     a. Import the pos2016.csv file and subset it:
-
-
 ```{python}
 import pandas as pd
 df = pd.read_csv('pos_2016.csv', encoding='Windows-1252', low_memory=False)
 
-
-```
-```{python}
-import pandas as pd
-df = pd.read_csv('pos_2016.csv', encoding='Windows-1252', low_memory=False)
-
-df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date", "facility_name", "prvdr_num", "zip_code", "termination_code", "termination_date"]
+df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date", "facility_name", "prvdr_num", "termination_code", "zip_code"]
 
 #The date fields are numbers, so we need to change the numbers in the date fields to strings and then date objects. Attribution: Used ChatGPT to assist with regex issues
 df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
 df['certification_date'] = pd.to_datetime(df['certification_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
-df['termination_date'] = pd.to_datetime(df['termination_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
-
 df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
+
+#We also need to change the zip codes from numbers to strings for later
+df['numeric_column'] = df['numeric_column'].astype(str)
 
 ```
 
@@ -80,13 +73,11 @@ def read_clean_filter(pathname):
   """
   df = pd.read_csv(pathname, encoding='Windows-1252', low_memory=False)
 
-  df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date", "facility_name", "prvdr_num", "zip_code", "termination_code", "termination_date"]
+  df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date", "facility_name", "prvdr_num", "termination_code", "zip_code"]
   
   df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
   df['certification_date'] = pd.to_datetime(df['certification_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
-
-  df['termination_date'] = pd.to_datetime(df['termination_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
   df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
 
@@ -107,111 +98,91 @@ Now we plot the # of observations in the dataset by year of certification date:
 
 ```{python}
 
-observations_by_year = df_all.alt.Chart().mark_point.encode(
-  x = alt.X('year')
+import altair as alt
+
+df_all['year'] = df_all['certification_date'].dt.year
+summary = df_all.groupby('year').size().reset_index(name='count')
+
+observations_by_year = alt.Chart(summary).mark_bar().encode(
+  x = alt.X('year:O', title="Year"),
+  y = alt.Y('count', title="Number of Observations")
 )
-# The above doesn't run
+
+observations_by_year
+
 ```
 
+
 4. 
-    a.
-    b.
+a. Now we repeat the previous step but this time plot unique hospitals by year instead of just observations:
+
+```{python}
+
+unique_hospitals = df_all.drop_duplicates(subset=['prvdr_num', 'year'])
+unique_summary = unique_hospitals.groupby('year').size().reset_index(name='count')
+
+unique_hospitals_by_year = alt.Chart(unique_summary).mark_bar().encode(
+  x = alt.X('year:O', title="Year"),
+  y = alt.Y('count', title="Number of Unique Hospitals")
+)
+
+unique_hospitals_by_year
+
+```
+
+
+b. Not only are the plots different, we can see two things: 
+
+1. The maximum number of hospitals is much smaller than the maximum number of observations, implying there are a lot of repeat rows in the data for the same facilities.
+2. The graph of unique hospitals is much more skewed to the right than simply graphing observations, implying that either many new hospitals were certified from 2014 onwards, or that many old hospitals were merged/rebranded into new hospitals from 2014 onwards. Based on what we've read in the KFF article, it's highly likely that recent corporate/economic pressures caused hospitals to merge/rebrand leading to a rush of new certifications, rather than an actual increase in the amount of hospital capacity.
 
 ## Identify hospital closures in POS file (15 pts) (*)
 
-```{python}
 
-import geopandas
-import numpy as np
-
-```
-
-1. Create a list of hospitals active in 2016, closed by 2019 (facility name, zip, year of closure). How many are there?
-
-```{python}
-
-# Create temporary, smaller dataframes for this purpose
-df_2016_temp = df[['facility_name', 'prvdr_num',
-                   'zip_code', 'termination_code']]
-df_2017_temp = df_2017[['facility_name',
-                        'prvdr_num', 'zip_code', 'termination_code']]
-df_2018_temp = df_2018[['facility_name',
-                        'prvdr_num', 'zip_code', 'termination_code']]
-df_2019_temp = df_2019[['facility_name',
-                        'prvdr_num', 'zip_code', 'termination_code']]
-
-# Merge them on provider number to have all the term codes together by year
-df_terms = df_2016_temp.merge(df_2017_temp, on=['prvdr_num'],
-                              how='outer', suffixes=('', '_2017')
-                              ).merge(df_2018_temp, on=['prvdr_num'],
-                                      how='outer', suffixes=('', '_2018')
-                                      ).merge(df_2019_temp, on=['prvdr_num'],
-                                              how='outer', suffixes=('', '_2019'))
-
-# Rename 2016 column & filter for only those active in 2016
-df_terms = df_terms.rename(
-    columns={'termination_code': 'termination_code_2016', 
-    'zip_code': 'zip_code_2016'})
-df_terms = df_terms[df_terms['termination_code_2016'] == 0]
-
-# Filter to find only those who closed throughout the years
-df_16_19_closures = df_terms[
-    (df_terms['termination_code_2017'] != 0) |
-    (df_terms['termination_code_2018'] != 0) |
-    (df_terms['termination_code_2019'] != 0)]
-
-# Function to find closure year, or nan if not closed
-def closure_year(row):
-    for year in range(2017, 2020):
-        termination_code = row[f'termination_code_{year}']
-        if termination_code != 0:
-            return year
-    return np.nan
-
-# Apply the function (found .apply() on stackoverflow
-# https://stackoverflow.com/questions/19914937/applying-function-
-# with-multiple-arguments-to-create-a-new-pandas-column)
-df_16_19_closures['closure_year'] = df_16_19_closures.apply(
-    closure_year, axis=1)
-
-# Find how many
-print(len(df_16_19_closures))
-
-```
-
-There are 174 hospitals that fit this definition, but it's worth noting that some of the hospitals close and then reopen. Some of the reopenings are under different names, but with the same provider code. 
-
-2. Sort by name and report first 10.
-
-```{python}
-
-df_2_2 = df_16_19_closures[['facility_name', 'prvdr_num',
-                            'termination_code_2016',
-                            'termination_code_2017',
-                            'termination_code_2018',
-                            'termination_code_2019']]
-                            
-print(df_2_2.sort_values(by='facility_name').head(10))
-
-```
-
-3. Remove closures in ZIPs where number of closures doesnt decrease
-
-```{python}
-
-
-
-```
-
+1. 
+2. 
+3. 
     a.
     b.
+    c.
 
 ## Download Census zip code shapefile (10 pt) 
 
 1. 
-    a.
-    b. 
-2. 
+    a. The five file types are:
+      1. .shp - The file that contains the actual geoms (points, lines, polygons) that will be displayed
+      2. .dbf - Stores attribute data for each shape in the .shp file, like population, income, temperature, etc. 
+      3. .shx - An index file that points to specific shapes in the .shp file for easier navigation
+      4. .prj - A projection file that stores the coordinate information for latitude/longitude 
+      5. .xml - Metadata file that is mostly used for documentation/readme purposes, including data sources, attributes, etc.
+    b. The .shp file is the largest at 837.5 MB, while the other files are:
+      .dbf - 6.4 MB
+      .shx - 0.26 MB
+      .xml - 16 KB
+      .prj - 0.16 KB
+2. To open the shapefile, we will install and use geopandas:
+
+```{python}
+import geopandas as gpd
+zip_codes = gpd.read_file("/Users/charleshuang/Downloads/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shp")
+
+#Texas zip codes always start with 75, 76, or 77, and ZCTA5 is the column with the zip codes
+#Used ChatGPT to find a function that can identify strings by the first few characters
+tx_zip_codes = zip_codes[zip_codes["ZCTA5"].str.startswith(('75', '76', '77'))]
+
+print(tx_zip_codes.head())
+```
+
+Now we calculate the # of hospitals per zip code in 2016 based on the previous step:
+
+```{python}
+
+import shapely
+from shapely import Polygon, Point
+
+#We need to merge our previous hospital data with the shapefile zip_codes data:
+
+```
 
 ## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
 
