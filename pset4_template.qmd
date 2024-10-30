@@ -95,18 +95,43 @@ Now we plot the # of observations in the dataset by year of certification date:
 
 ```{python}
 
-observations_by_year = df_all.alt.Chart().mark_point.encode(
-  x = alt.X('year')
+import altair as alt
+
+df_all['year'] = df_all['certification_date'].dt.year
+summary = df_all.groupby('year').size().reset_index(name='count')
+
+observations_by_year = alt.Chart(summary).mark_bar().encode(
+  x = alt.X('year:O', title="Year"),
+  y = alt.Y('count', title="Number of Observations")
 )
+
+observations_by_year
 
 ```
 
 
-
-
 4. 
-    a.
-    b.
+a. Now we repeat the previous step but this time plot unique hospitals by year instead of just observations:
+
+```{python}
+
+unique_hospitals = df_all.drop_duplicates(subset=['prvdr_num', 'year'])
+unique_summary = unique_hospitals.groupby('year').size().reset_index(name='count')
+
+unique_hospitals_by_year = alt.Chart(unique_summary).mark_bar().encode(
+  x = alt.X('year:O', title="Year"),
+  y = alt.Y('count', title="Number of Unique Hospitals")
+)
+
+unique_hospitals_by_year
+
+```
+
+
+b. Not only are the plots different, we can see two things: 
+
+1. The maximum number of hospitals is much smaller than the maximum number of observations, implying there are a lot of repeat rows in the data for the same facilities.
+2. The graph of unique hospitals is much more skewed to the right than simply graphing observations, implying that either many new hospitals were certified from 2014 onwards, or that many old hospitals were merged/rebranded into new hospitals from 2014 onwards. Based on what we've read in the KFF article, it's highly likely that recent corporate/economic pressures caused hospitals to merge/rebrand leading to a rush of new certifications, rather than an actual increase in the amount of hospital capacity.
 
 ## Identify hospital closures in POS file (15 pts) (*)
 
