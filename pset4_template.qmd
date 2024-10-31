@@ -24,6 +24,12 @@ include-before-body:
 
 ## Submission Steps (10 pts)
 
+"This submission is our work alone and complies with the 30538 integrity policy.” Add your initials to indicate your agreement: **_JB_** **_CH_**
+
+“I have uploaded the names of anyone else other than my partner and I worked with on the problem set here” (1 point)
+
+Late coins used this pset: **__** Late coins left after submission: **__**
+
 ## Download and explore the Provider of Services (POS) file (10 pts)
 
 (Note: Used ChatGPT to troubleshoot why pd.read_csv wasn't working- learned to specify a different encoding other than utf-8)
