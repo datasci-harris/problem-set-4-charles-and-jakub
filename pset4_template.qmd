@@ -149,6 +149,8 @@ b. Not only are the plots different, we can see two things:
 
 import geopandas
 import numpy as np
+import geopandas as gpd
+import matplotlib as plt
 
 ```
 
@@ -221,9 +223,8 @@ print(df_2_2.sort_values(by='facility_name').head(10))
 
 ```{python}
 
-active_counts_by_zip = {}
-
 # Loop through each year and count active hospitals by ZIP code
+active_counts_by_zip = {}
 for year in range(2016, 2020):
     active_hospitals = df_16_19_closures[df_16_19_closures[f'termination_code_{
         year}'] == 0]
@@ -248,11 +249,19 @@ active_hospitals_by_year['change_2018_2019'] = active_hospitals_by_year[
 df_17_closures = df_16_19_closures[df_16_19_closures['closure_year'] == 2017]
 df_18_closures = df_16_19_closures[df_16_19_closures['closure_year'] == 2018]
 
-df_change_17_18 = active_hospitals_by_year[active_hospitals_by_year['change_2017_2018'] == 0]
-df_change_18_19 = active_hospitals_by_year[active_hospitals_by_year['change_2018_2019'] == 0]
+# All zip codes wherein there was no change in active hospitals between
+# 2017-2018 and 2018-2019
+df_change_17_18 = active_hospitals_by_year[
+    active_hospitals_by_year['change_2017_2018'] == 0]
+df_change_18_19 = active_hospitals_by_year[
+    active_hospitals_by_year['change_2018_2019'] == 0]
 
-df_17_no_change = df_17_closures[~df_17_closures['zip_code_2016'].isin(df_change_17_18['zip_code_2016'])]
-df_18_no_change = df_18_closures[~df_18_closures['zip_code_2016'].isin(df_change_18_19['zip_code_2016'])]
+# Filter out hospitals in zip codes where there are no changes between 17-18
+# and 18-19
+df_17_no_change = df_17_closures[~df_17_closures[
+    'zip_code_2016'].isin(df_change_17_18['zip_code_2016'])]
+df_18_no_change = df_18_closures[~df_18_closures[
+    'zip_code_2016'].isin(df_change_18_19['zip_code_2016'])]
 
 ```
 
@@ -276,12 +285,12 @@ df_18_no_change = df_18_closures[~df_18_closures['zip_code_2016'].isin(df_change
 2. To open the shapefile, we will install and use geopandas:
 
 ```{python}
-import geopandas as gpd
-zip_codes = gpd.read_file("/Users/charleshuang/Downloads/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shp")
+
+zip_codes = gpd.read_file("/Users/jakub/Downloads/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shp")
 
 #Texas zip codes always start with 75, 76, or 77, and ZCTA5 is the column with the zip codes
 #Used ChatGPT to find a function that can identify strings by the first few characters
-tx_zip_codes = zip_codes[zip_codes["ZCTA5"].str.startswith(('75', '76', '77'))]
+tx_zip_codes = zip_codes[zip_codes["ZCTA5"].str.startswith(('75', '76', '77', '78', '79'))]
 
 print(tx_zip_codes.head())
 ```
@@ -292,25 +301,173 @@ Now we calculate the # of hospitals per zip code in 2016 based on the previous s
 
 import shapely
 from shapely import Polygon, Point
-
+import time
+import matplotlib as plt
 #We need to merge our previous hospital data with the shapefile zip_codes data:
 
 ```
 
 ## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
 
-1. 
-2. 
-3. 
-4. 
-    a.
-    b.
-    c.
-5. 
-    a.
-    b.
-    c.
-    
+1. GeoDataFrame for centroid of each zip code nationally, dimensions, columns. 
+
+```{python}
+
+zips_all_centroids = zip_codes.copy()
+zips_all_centroids['centroid'] = zip_codes['geometry'].centroid
+zips_all_centroids.total_bounds
+zips_all_centroids.head()
+
+```
+
+The total bounds (dimensions) of the resulting GeoDataFrame are [-176.684744, 17.910817, -65.224638, 71.341324]. The columns are:
+- GEO_ID - a unique identifier for some geographic area. The last 5 numbers appear to the be zip code.
+- ZCTA5 - Zip Code Tabulation Area, represents 1 or a group of zip codes. 
+- NAME - name of the area, appears to be the same as zip code.
+- geometry - identifies the shape (polygon or multipolygon), as well as the specific points it uses to create the shape. 
+- centroid - identifies the centroid of the shape as a single point. 
+
+2. Subset above into texas & texas or bordering state. 
+
+```{python}
+
+# Convert Texas zips into list & cross-reference
+tx_zip_codes_list = tx_zip_codes['ZCTA5'].tolist()
+zips_texas_centroids = zips_all_centroids[zips_all_centroids['ZCTA5'].isin(
+    tx_zip_codes_list)]
+print(len(zips_texas_centroids))
+
+# Oklahoma, Arkansas, Louisiana, New Mexico
+tx_border_zip_codes = zip_codes[zip_codes["ZCTA5"].str.startswith(
+    ('7', '87', '88'))]
+tx_border_zip_codes_list = tx_border_zip_codes['ZCTA5'].tolist()
+zips_texas_borderstates_centroids = zips_all_centroids[zips_all_centroids['ZCTA5'].isin(
+    tx_border_zip_codes_list)]
+print(len(zips_texas_borderstates_centroids))
+```
+
+There are 1,935 unique zip codes in Texas and 4,057 unique zip codes in Texas or a bordering state.
+
+3. Subset that contains at least 1 hospital
+
+```{python}
+
+# Make sure they're the same type
+active_2016 = df_terms['zip_code_2016'].astype(int)
+zips_texas_borderstates_centroids['ZCTA5'] = zips_texas_borderstates_centroids[
+    'ZCTA5'].astype(int)
+
+zips_withhospital_centroids = zips_texas_borderstates_centroids.merge(
+    active_2016, left_on='ZCTA5', right_on='zip_code_2016', how='inner')
+print(len(zips_withhospital_centroids))
+
+```
+
+We did an inner merge because we only want to keep the rows from zips_texasborderstates_centroids that have an active hospital in them and retain the geodata. We don't need any of the other information from the hospitals dataset. We merged left on ZCTA5 and right on zip_code_2016 because both of these variables contain zip codes. The result is 556 Texas or bordering states zip codes with hospitals out of the 4,057 total zip codes we found earlier. 
+
+4. Calculate distance to nearest zip code w hospital.
+    a. Subset to 10 & time it. Estimate total time. 
+
+```{python}
+
+# Subset only 10 observations. data_for_join only zcta5 and geometry
+zips_texas_centroids_10 = zips_texas_centroids.head(10)
+data_for_join_10 = zips_texas_centroids_10[["ZCTA5", "geometry"]]
+
+# Spatial join based on lecure slides
+# Asked ChatGPT how to time a function to get that part
+start_time_10 = time.time()
+join_to_hospital_10 = gpd.sjoin_nearest(
+    data_for_join_10,
+    zips_withhospital_centroids,
+    how='inner',
+    distance_col="distance_hospital")
+end_time_10 = time.time()
+
+elapsed_time_10 = end_time_10 - start_time_10
+print(elapsed_time_10)
+full_estimate = elapsed_time_10 * (556/10)
+print(full_estimate)
+join_to_hospital_10.head()
+
+```
+
+It took about 0.6 seconds to run this subset of 10 zip codes on my machine, so I would estimate that the full data would take about 55.6 times longer, or about 35 seconds (the exact times are printed above).
+
+    b. Full calculation
+
+```{python}
+
+data_for_join = zips_texas_centroids[["ZCTA5", "geometry"]]
+
+start_time = time.time()
+join_to_hospital = gpd.sjoin_nearest(
+    data_for_join,
+    zips_withhospital_centroids,
+    how='inner',
+    distance_col="distance_hospital")
+end_time = time.time()
+
+elapsed_time = end_time - start_time
+print(elapsed_time)
+
+```
+
+The full calculation took 309s, which is almost 10 times larger than my estimate. 
+
+    c. Units
+
+```{python}
+
+join_to_hospital['distance_hospital_miles'] = join_to_hospital[
+    'distance_hospital'] * 69
+
+```
+
+The .prj file reports the units as UNIT["Degree",0.017453292519943295]. According to the USGS, one degree of latitude is about 69 miles.
+
+5. Average Distances within zipcodes in Texas.
+    a. What unit? 
+
+```{python}
+
+avg_dist_hospital = join_to_hospital.groupby(
+    'ZCTA5_left')['distance_hospital'].mean(
+    ).reset_index()
+
+```
+
+    b. Convert to miles. Makes sense?
+
+```{python}
+
+avg_dist_hospital['distance_hospital_miles'] = avg_dist_hospital['distance_hospital'] * 69
+avg_dist_hospital = avg_dist_hospital.rename(columns={'ZCTA5_left':'ZCTA5'})
+
+```
+
+    c. Map the value for each zip. 
+
+```{python}
+
+avg_per_zip = zips_texas_centroids.merge(
+    avg_dist_hospital,
+    on = 'ZCTA5',
+    how='left')
+
+```
+
+```{python}
+
+# Plot Texas. ChatGPT was used for assistance on the colors and how to save as png
+avg_per_zip.plot(column='distance_hospital_miles', cmap='RdBu_r', legend=True)
+plt.axis('off')
+plt.savefig("texas_map.png", format='png', bbox_inches='tight', dpi=300)
+
+```
+
+![Texas Nearest Hospital Distance Map (miles)](texas_map.png)
+
 ## Effects of closures on access in Texas (15 pts)
 
 1. 
