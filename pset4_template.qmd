@@ -368,19 +368,28 @@ tx_zip_hospitals = tx_zip_codes.merge(texas_summary_2016, left_on="ZCTA5", right
 # Replace NaN hospital counts with 0
 tx_zip_hospitals['hospital_count'] = tx_zip_hospitals['hospital_count'].fillna(0).astype(int)
 
-tx_zip_hospitals.plot(column='hospital_count', legend=True)
+#Attribution: ChatGPT suggested defining custom bins to make it easier to differentiate regions
+
+
+tx_zip_hospitals.plot(column='hospital_count',
+cmap='PuBu',
+legend=True)
+
+tx_zip_hospitals.plot(
+    column='hospital_count',
+    cmap='PuBu',
+    legend=True
+)
+
+plt.title("Number of Hospitals by Zip Code in Texas")
+plt.axis('off')
+
+plt.show()
+
 
 ```
 
 
-```{python}
-tx_zip_hospitals.sort_values(by="hospital_count", ascending=False)
-
-# Check if any zip codes in texas_summary_2016 match those in tx_zip_codes
-matching_zip_codes = set(texas_summary_2016['zip_code']).intersection(set(tx_zip_codes['ZCTA5']))
-print("Number of matching zip codes:", len(matching_zip_codes))
-
-```
 
 ## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
 
