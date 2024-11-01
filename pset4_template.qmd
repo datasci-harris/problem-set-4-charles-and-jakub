@@ -1,6 +1,5 @@
 ---
 title: "Problem Set 4: Spatial"
-title: "Problem Set 4: Spatial"
 format: 
   pdf:
     keep-tex: true
@@ -24,12 +23,6 @@ include-before-body:
 
 ## Submission Steps (10 pts)
 
-"This submission is our work alone and complies with the 30538 integrity policy.” Add your initials to indicate your agreement: **_JB_** **_CH_**
-
-“I have uploaded the names of anyone else other than my partner and I worked with on the problem set here” (1 point)
-
-Late coins used this pset: **__** Late coins left after submission: **__**
-
 ## Download and explore the Provider of Services (POS) file (10 pts)
 
 (Note: Used ChatGPT to troubleshoot why pd.read_csv wasn't working- learned to specify a different encoding other than utf-8)
@@ -43,6 +36,7 @@ Late coins used this pset: **__** Late coins left after submission: **__**
   -subtype 1 (PRVDR_CTGRY_SBTYP_CD)
   -CMS Certification number (PRVDR_NUM)
   -Termination Code (PGM_TRMNTN_CD)
+  -Termination Date (TRMNTN_EXPRTN_DT)
   -Facility Name (FAC_NAME)
   -Facility Zip (ZIP_CD)
 
@@ -51,24 +45,36 @@ Late coins used this pset: **__** Late coins left after submission: **__**
 
 
 ```{python}
+
 import pandas as pd
 df = pd.read_csv('pos_2016.csv', encoding='Windows-1252', low_memory=False)
+
 ```
 
 ```{python}
+
 import pandas as pd
 df = pd.read_csv('pos_2016.csv', encoding='Windows-1252', low_memory=False)
 
-df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date", "facility_name", "prvdr_num", "zip_code", "termination_code", "termination_date"]
+df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date",
+              "facility_name", "prvdr_num", "zip_code", "termination_code", "termination_date"]
 
-#The date fields are numbers, so we need to change the numbers in the date fields to strings and then date objects. Attribution: Used ChatGPT to assist with regex issues
-df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
+# The date fields are numbers, so we need to change the numbers in the date fields to strings and then date objects. Attribution: Used ChatGPT to assist with regex issues
+df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(
+    str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
-df['certification_date'] = pd.to_datetime(df['certification_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
+df['certification_date'] = pd.to_datetime(df['certification_date'].astype(
+    str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
-df['termination_date'] = pd.to_datetime(df['termination_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
+df['termination_date'] = pd.to_datetime(df['termination_date'].astype(
+    str).str.replace('.0', '', regex=False), format='%Y%m%d')
+
+# Convert zip code and termination codes to strings
+df['termination_code'] = df['termination_code'].astype(str)
+df['zip_code'] = df['zip_code'].astype(str)
 
 df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
+
 ```
 
   b. After subsetting to only short-term hospitals with these codes, we find 7245 hospitals in our data set. The provided KFF article cites a number of "nearly 5000".
@@ -80,29 +86,37 @@ This discrepancy could be due to potential duplicates in our data (if a hospital
 ```{python}
 
 def read_clean_filter(pathname):
-  """Reads the raw csv files from CMS, renames the columns, and filters to only short term hospitals.
-  Also updates the date columns to pd.datetime format
-  """
-  df = pd.read_csv(pathname, encoding='Windows-1252', low_memory=False)
+    """Reads the raw csv files from CMS, renames the columns, and filters to only short term hospitals.
+    Also updates the date columns to pd.datetime format
+    """
+    df = pd.read_csv(pathname, encoding='Windows-1252', low_memory=False)
 
-  df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date", "facility_name", "prvdr_num", "zip_code", "termination_code", "termination_date"]
-  
-  df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
+    df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date",
+                  "facility_name", "prvdr_num", "zip_code", "termination_code", "termination_date"]
 
-  df['certification_date'] = pd.to_datetime(df['certification_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
+    df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(
+        str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
-  df['termination_date'] = pd.to_datetime(df['termination_date'].astype(str).str.replace('.0', '', regex=False), format='%Y%m%d')
+    df['certification_date'] = pd.to_datetime(df['certification_date'].astype(
+        str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
-  df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
+    df['termination_date'] = pd.to_datetime(df['termination_date'].astype(
+        str).str.replace('.0', '', regex=False), format='%Y%m%d')
 
-  return df
+    df['termination_code'] = df['termination_code'].astype(str)
+    df['zip_code'] = df['zip_code'].astype(str)
+
+    df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
+
+    return df
+
 
 df_2017 = read_clean_filter("pos_2017.csv")
 df_2018 = read_clean_filter("pos_2018.csv")
 df_2019 = read_clean_filter("pos_2019.csv")
 
-#Merge all dataframes from 2016-2019 together
-#Use this for future pset problems
+# Merge all dataframes from 2016-2019 together
+# Use this for future pset problems
 
 df_all = pd.concat([df, df_2017, df_2018, df_2019], ignore_index=True)
 
@@ -118,8 +132,8 @@ df_all['year'] = df_all['certification_date'].dt.year
 summary = df_all.groupby('year').size().reset_index(name='count')
 
 observations_by_year = alt.Chart(summary).mark_bar().encode(
-  x = alt.X('year:O', title="Year"),
-  y = alt.Y('count', title="Number of Observations")
+    x=alt.X('year:O', title="Year"),
+    y=alt.Y('count', title="Number of Observations")
 )
 
 observations_by_year
@@ -132,11 +146,12 @@ a. Now we repeat the previous step but this time plot unique hospitals by year i
 ```{python}
 
 unique_hospitals = df_all.drop_duplicates(subset=['prvdr_num', 'year'])
-unique_summary = unique_hospitals.groupby('year').size().reset_index(name='count')
+unique_summary = unique_hospitals.groupby(
+    'year').size().reset_index(name='count')
 
 unique_hospitals_by_year = alt.Chart(unique_summary).mark_bar().encode(
-  x = alt.X('year:O', title="Year"),
-  y = alt.Y('count', title="Number of Unique Hospitals")
+    x=alt.X('year:O', title="Year"),
+    y=alt.Y('count', title="Number of Unique Hospitals")
 )
 
 unique_hospitals_by_year
@@ -164,51 +179,23 @@ import matplotlib as plt
 
 ```{python}
 
-# Create temporary, smaller dataframes for this purpose
-df_2016_temp = df[['facility_name', 'prvdr_num',
-                   'zip_code', 'termination_code']]
-df_2017_temp = df_2017[['facility_name',
-                        'prvdr_num', 'zip_code', 'termination_code']]
-df_2018_temp = df_2018[['facility_name',
-                        'prvdr_num', 'zip_code', 'termination_code']]
-df_2019_temp = df_2019[['facility_name',
-                        'prvdr_num', 'zip_code', 'termination_code']]
+# Create a list of all hospitals active in 2016:
+df_2016_active = df[df["termination_code"] == "0"]
 
-# Merge them on provider number to have all the term codes together by year
-df_terms = df_2016_temp.merge(df_2017_temp, on=['prvdr_num'],
-                              how='outer', suffixes=('', '_2017')
-                              ).merge(df_2018_temp, on=['prvdr_num'],
-                                      how='outer', suffixes=('', '_2018')
-                                      ).merge(df_2019_temp, on=['prvdr_num'],
-                                              how='outer', suffixes=('', '_2019'))
+# Now go back to original dataset and find zip codes where the number of active hospitals does not decrease in the year after the suspected closure.
 
-# Rename 2016 column & filter for only those active in 2016
-df_terms = df_terms.rename(
-    columns={'termination_code': 'termination_code_2016', 
-    'zip_code': 'zip_code_2016'})
-df_terms = df_terms[df_terms['termination_code_2016'] == 0]
+# By definition, we don't have 2020 data for 2019 closures, and if we are looking at all 2016 active hospitals, 2017 is irrelevant.
+# So we are looking only at hospitals that closed in 2017 and 2018.
 
-# Filter to find only those who closed sometime throughout the years
-df_16_19_closures = df_terms[
-    (df_terms['termination_code_2017'] != 0) |
-    (df_terms['termination_code_2018'] != 0) |
-    (df_terms['termination_code_2019'] != 0)]
+closed_in_1718 = df_all[(df_all["termination_date"] >= "2017-01-01")
+                        & (df_all["termination_date"] <= "2018-12-31")]
 
-# Function to find closure year for each hospital
-def closure_year(row):
-    for year in range(2017, 2020):
-        termination_code = row[f'termination_code_{year}']
-        if termination_code != 0:
-            return year
+# Now remove duplicates:
+closed_in_1718 = closed_in_1718.drop_duplicates(subset='prvdr_num')
 
-# Apply the function (found .apply() on stackoverflow
-# https://stackoverflow.com/questions/19914937/applying-function-
-# with-multiple-arguments-to-create-a-new-pandas-column)
-df_16_19_closures['closure_year'] = df_16_19_closures.apply(
-    closure_year, axis=1)
-
-# Find how many
-print(len(df_16_19_closures))
+# These are the hospitals in our dataset that closed in 2017-2018.
+print(f"There are {len(closed_in_1718)
+                   } hospitals that closed during this period.")
 
 ```
 
@@ -218,10 +205,9 @@ There are 174 hospitals that fit this definition, but it's worth noting that som
 
 ```{python}
 
-df_2_2 = df_16_19_closures[['facility_name', 
-                            'closure_year']]
-                            
-print(df_2_2.sort_values(by='facility_name').head(10))
+closed_in_1718.sort_values(by='facility_name', ascending=True, inplace=True)
+
+closed_in_1718.head(10)
 
 ```
 
@@ -229,50 +215,132 @@ print(df_2_2.sort_values(by='facility_name').head(10))
 
 ```{python}
 
-# Loop through each year and count active hospitals by ZIP code
-active_counts_by_zip = {}
-for year in range(2016, 2020):
-    active_hospitals = df_16_19_closures[df_16_19_closures[f'termination_code_{
-        year}'] == 0]
-    active_counts = active_hospitals.groupby(
-        'zip_code_2016').size().reset_index(name=f'active_hospitals_{year}')
-    active_counts_by_zip[year] = active_counts
+corrected_closures.sort_values(
+    by='facility_name', ascending=True, inplace=True)
 
-# Merge active hospital counts on zip code, missing implies closed, so 0 count
-active_hospitals_by_year = active_counts_by_zip[2016]
-for year in range(2017, 2020):
-    active_hospitals_by_year = active_hospitals_by_year.merge(
-        active_counts_by_zip[year], on='zip_code_2016', how='outer')
-active_hospitals_by_year = active_hospitals_by_year.fillna(0)
-
-# We can't use 2016 or 2020, so find 17-18 and 18-19
-active_hospitals_by_year['change_2017_2018'] = active_hospitals_by_year[
-    'active_hospitals_2018'] - active_hospitals_by_year['active_hospitals_2017']
-active_hospitals_by_year['change_2018_2019'] = active_hospitals_by_year[
-    'active_hospitals_2019'] - active_hospitals_by_year['active_hospitals_2018']
-
-# This contains only hospitals that 'closed' in 17 or 18
-df_17_closures = df_16_19_closures[df_16_19_closures['closure_year'] == 2017]
-df_18_closures = df_16_19_closures[df_16_19_closures['closure_year'] == 2018]
-
-# All zip codes wherein there was no change in active hospitals between
-# 2017-2018 and 2018-2019
-df_change_17_18 = active_hospitals_by_year[
-    active_hospitals_by_year['change_2017_2018'] == 0]
-df_change_18_19 = active_hospitals_by_year[
-    active_hospitals_by_year['change_2018_2019'] == 0]
-
-# Filter out hospitals in zip codes where there are no changes between 17-18
-# and 18-19
-df_17_no_change = df_17_closures[~df_17_closures[
-    'zip_code_2016'].isin(df_change_17_18['zip_code_2016'])]
-df_18_no_change = df_18_closures[~df_18_closures[
-    'zip_code_2016'].isin(df_change_18_19['zip_code_2016'])]
+corrected_closures.head(10)
 
 ```
 
-    a.
-    b.
+```{python}
+
+# Now for each closure, we need to check its zip code and see if it was a zip code where the number of active hospitals did not decrease the year after its closure.
+# Each df_201x dataset is a snapshot of the state of hospitals in Q4-2017 or Q4-2018.
+
+# How about this? Take the df_2017 data set only, and do a summary that counds the number of active hospitals by zip code. Then do the same for df_2018 and df_2019. Now we have three tables showing the breakdown of each zipcodes' active hospitals for each year.
+
+# Attribution: Originally tried this with a for loop, but ChatGPT suggested using a dictionary to store the summary tables instead
+
+active_hospital_summaries = {}
+
+# Iterate through each DataFrame and generate the summary table
+for year, df_x in zip(['2017', '2018', '2019'], [df_2017, df_2018, df_2019]):
+
+    df_x['is_active'] = df_x['termination_code'] == "0"
+    active_hospitals = df_x.groupby(
+        'zip_code')['is_active'].sum().reset_index()
+
+    # Store summary table in the dictionary
+    active_hospital_summaries[f'active_hospitals_{year}'] = active_hospitals
+
+# for readability
+ah_2017 = active_hospital_summaries['active_hospitals_2017']
+ah_2018 = active_hospital_summaries['active_hospitals_2018']
+ah_2019 = active_hospital_summaries['active_hospitals_2019']
+
+
+# Now we need to use these tables to create a way for us to check: when we provide our function a hospital closure, how can our function check to see if it was in a zip code where the number of active hospitals did not decrease the year after its closure?
+# We can do this by taking our summary tables and merging them:
+
+ah_2017 = ah_2017.rename(columns={'is_active': 'active_2017'})
+ah_2018 = ah_2018.rename(columns={'is_active': 'active_2018'})
+
+comp_2017_2018 = pd.merge(ah_2017, ah_2018, on="zip_code", how="outer")
+
+# This handles any zip codes that were not present in 2017 or 2018 and now have a NA as part of the merge
+comp_2017_2018.fillna(0, inplace=True)
+
+# Now create a col that puts a boolean value if a zip code's active hospitals decreased from 2017-2018
+comp_2017_2018['did_decrease'] = (
+    comp_2017_2018['active_2017'] > comp_2017_2018['active_2018']).astype(int)
+
+# And repeat for 2018-2019
+ah_2019 = ah_2019.rename(columns={'is_active': 'active_2017'})
+comp_2018_2019 = pd.merge(ah_2018, ah_2019, on="zip_code", how="outer")
+comp_2018_2019.fillna(0, inplace=True)
+comp_2018_2019['did_decrease'] = (
+    comp_2018_2019['active_2017'] > comp_2018_2019['active_2018']).astype(int)
+
+# Now we have our two comparison tables, so let's write a function that goes through closed_in_1718 that does the following:
+
+
+def check_zip(closed_df, comp_2017_2018, comp_2018_2019):
+    """
+    #create a placeholder list for decreasing zipcodes (see below)
+    #take the zipcode of the current row and check the termination_date's year
+    #depending on whether the termination_date's year is 2017 or 2018, refer to the comp_2017_2018 or the comp_2018_2019 table
+    #take the zipcode of the current row and check whether that zipcode has a 0 or 1 in the "did_decrease" column
+    #if that zipcode has a 1 in that column, add it to the decreasing zipcodes list
+    #the function should return a list of all zipcodes that had decreasing hospitals
+    """
+
+    decreasing_zipcodes = []
+
+    zip_codes = closed_df['zip_code']
+    termination_years = closed_df['termination_date'].dt.year
+
+    for zip_code, year in zip(zip_codes, termination_years):
+        # Select the appropriate comparison table based on the termination year
+        if year == 2017:
+            comp_table = comp_2017_2018
+        elif year == 2018:
+            comp_table = comp_2018_2019
+        else:
+            # Skip if the termination year is not 2017 or 2018
+            continue
+
+        # Check if the zip code exists in the comparison table and if it shows a decrease
+        if zip_code in comp_table['zip_code'].values:
+            did_decrease = comp_table.loc[comp_table['zip_code']
+                                          == zip_code, 'did_decrease'].values[0]
+
+            # If the zip code had a decrease in active hospitals, add it to the list
+            if did_decrease == 1:
+                decreasing_zipcodes.append(zip_code)
+
+    return decreasing_zipcodes
+
+
+decreasing_zipcodes = check_zip(closed_in_1718, comp_2017_2018, comp_2018_2019)
+
+print(decreasing_zipcodes)
+
+```
+
+  a. Now we have a list of decreasing zipcodes, these are likely mergers/acquisitions:
+
+  ```{python}
+  
+  print(f"There are {len(decreasing_zipcodes)} hospitals that fit this definition.")
+
+  ```
+
+  b. After correcting for this, how many hospitals do you have left?
+  
+  94 - 12 hospitals = 82 hospitals
+
+  c. Sort this list of corrected hospital closures by name and report the first 10 rows.
+
+```{python}
+
+# Attribution: ChatGPT- Using ~ is the "not" operator (originally tried to do this with an != sign)
+corrected_closures = closed_in_1718[~closed_in_1718['zip_code'].isin(decreasing_zipcodes)]
+
+corrected_closures.sort_values(by='facility_name', ascending=True, inplace=True)
+
+corrected_closures.head(10)
+
+```
 
 ## Download Census zip code shapefile (10 pt) 
 
