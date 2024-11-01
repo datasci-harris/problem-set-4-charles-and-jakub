@@ -1,5 +1,5 @@
 ---
-title: "PS4: Spatial"
+title: "Problem Set 4: Spatial"
 format: 
   pdf:
     keep-tex: true
@@ -42,6 +42,8 @@ include-before-body:
 
 2. 
     a. Import the pos2016.csv file and subset it:
+
+
 ```{python}
 
 import pandas as pd
@@ -72,9 +74,6 @@ df['termination_code'] = df['termination_code'].astype(str)
 df['zip_code'] = df['zip_code'].astype(str)
 
 df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
-
-#We also need to change the zip codes from numbers to strings for later
-df['numeric_column'] = df['numeric_column'].astype(str)
 
 ```
 
@@ -213,15 +212,6 @@ closed_in_1718.head(10)
 ```
 
 3. Remove closures in ZIPs where number of active hospitals doesnt decrease
-
-```{python}
-
-corrected_closures.sort_values(
-    by='facility_name', ascending=True, inplace=True)
-
-corrected_closures.head(10)
-
-```
 
 ```{python}
 
@@ -379,7 +369,7 @@ Now we calculate the # of hospitals per zip code in 2016 based on the previous s
 import shapely
 from shapely import Polygon, Point
 import time
-import matplotlib as plt
+import matplotlib.pyplot as plt
 #We need to merge our previous hospital data with the shapefile zip_codes data:
 
 ```
@@ -428,9 +418,34 @@ There are 1,935 unique zip codes in Texas and 4,057 unique zip codes in Texas or
 3. Subset that contains at least 1 hospital
 
 ```{python}
+# Create temporary, smaller dataframes for this purpose
+df_2016_temp = df[['facility_name', 'prvdr_num',
+                   'zip_code', 'termination_code']]
+df_2017_temp = df_2017[['facility_name',
+                        'prvdr_num', 'zip_code', 'termination_code']]
+df_2018_temp = df_2018[['facility_name',
+                        'prvdr_num', 'zip_code', 'termination_code']]
+df_2019_temp = df_2019[['facility_name',
+                        'prvdr_num', 'zip_code', 'termination_code']]
+# Merge them on provider number to have all the term codes together by year
+df_terms = df_2016_temp.merge(df_2017_temp, on=['prvdr_num'],
+                              how='outer', suffixes=('', '_2017')
+                              ).merge(df_2018_temp, on=['prvdr_num'],
+                                      how='outer', suffixes=('', '_2018')
+                                      ).merge(df_2019_temp, on=['prvdr_num'],
+                                              how='outer', suffixes=('', '_2019'))
+# Rename 2016 column & filter for only those active in 2016
+df_terms = df_terms.rename(
+    columns={'termination_code': 'termination_code_2016', 
+    'zip_code': 'zip_code_2016'})
+df_terms = df_terms[df_terms['termination_code_2016'] == '0']
+```
+
+```{python}
 
 # Make sure they're the same type
-active_2016 = df_terms['zip_code_2016'].astype(int)
+active_2016 = df_terms['zip_code_2016'].str.replace(
+    '.0', '', regex=False).astype(int)
 zips_texas_borderstates_centroids['ZCTA5'] = zips_texas_borderstates_centroids[
     'ZCTA5'].astype(int)
 
@@ -490,7 +505,7 @@ print(elapsed_time)
 
 ```
 
-The full calculation took 309s, which is almost 10 times larger than my estimate. 
+The full calculation took 310s, which is almost 10 times larger than my estimate. 
 
     c. Units
 
@@ -553,3 +568,4 @@ plt.savefig("texas_map.png", format='png', bbox_inches='tight', dpi=300)
 4. 
 
 ## Reflecting on the exercise (10 pts) 
+
