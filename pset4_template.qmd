@@ -320,7 +320,7 @@ print(decreasing_zipcodes)
   a. Now we have a list of decreasing zipcodes, these are likely mergers/acquisitions:
 
   ```{python}
-  
+
   print(f"There are {len(decreasing_zipcodes)} hospitals that fit this definition.")
 
   ```
@@ -351,11 +351,13 @@ corrected_closures.head(10)
       3. .shx - An index file that points to specific shapes in the .shp file for easier navigation
       4. .prj - A projection file that stores the coordinate information for latitude/longitude 
       5. .xml - Metadata file that is mostly used for documentation/readme purposes, including data sources, attributes, etc.
+
     b. The .shp file is the largest at 837.5 MB, while the other files are:
       .dbf - 6.4 MB
       .shx - 0.26 MB
       .xml - 16 KB
       .prj - 0.16 KB
+
 2. To open the shapefile, we will install and use geopandas:
 
 ```{python}
