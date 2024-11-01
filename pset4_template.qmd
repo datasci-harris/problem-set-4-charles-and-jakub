@@ -125,7 +125,6 @@ observations_by_year = alt.Chart(summary).mark_bar().encode(
 
 observations_by_year
 
-
 ```
 
 4. 
@@ -361,7 +360,16 @@ Now we will create a choropleth of the hospitals in Texas by zip code:
 import shapely
 from shapely import Polygon, Point
 
+import geopandas as gpd
+
 #We need to merge our previous hospital data with the shapefile zip_codes data:
+
+tx_zip_hospitals = tx_zip_codes.merge(texas_df_2016, left_on="ZCTA5", right_on="zip_code", how="left")
+
+# Replace NaN hospital counts with 0
+tx_zip_hospitals['hospital_count'] = tx_zip_hospitals['hospital_count'].fillna(0)
+
+
 
 ```
 
