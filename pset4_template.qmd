@@ -359,8 +359,8 @@ Now we will create a choropleth of the hospitals in Texas by zip code:
 
 import shapely
 from shapely import Polygon, Point
-
 import geopandas as gpd
+import matplotlib as plt
 
 #We need to merge our previous hospital data with the shapefile zip_codes data:
 
