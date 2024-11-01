@@ -190,13 +190,6 @@ in the case of a merger, a CMS certification number will be appear to be “term
 
 
 ```{python}
-corrected_closures.sort_values(by='facility_name', ascending=True, inplace=True)
-
-corrected_closures.head(10)
-
-```
-
-```{python}
 #Now for each closure, we need to check its zip code and see if it was a zip code where the number of active hospitals did not decrease the year after its closure.
 #Each df_201x dataset is a snapshot of the state of hospitals in Q4-2017 or Q4-2018.
 
@@ -343,15 +336,20 @@ Now we calculate the # of hospitals per zip code in 2016 based on the previous s
 
 ```{python}
 #Note: This counts only short term, active hospitals in Texas
+
 texas_df_2016 = df[df['zip_code'].astype(str).str.startswith(('75', '76', '77', '78', '79'))]
 
 
 texas_summary_2016 =  texas_df_2016.groupby('zip_code').size().reset_index()
 
+#Remove trailing decimal points from zip code
+texas_summary_2016['zip_code'] = texas_summary_2016['zip_code'].astype(str).str.split('.').str[0].str.zfill(5)
+
 texas_summary_2016.columns = ['zip_code', 'hospital_count']
 print(texas_summary_2016.sort_values(by="hospital_count", ascending=False))
 
 ```
+
 
 Now we will create a choropleth of the hospitals in Texas by zip code:
 
@@ -360,16 +358,27 @@ Now we will create a choropleth of the hospitals in Texas by zip code:
 import shapely
 from shapely import Polygon, Point
 import geopandas as gpd
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 #We need to merge our previous hospital data with the shapefile zip_codes data:
 
-tx_zip_hospitals = tx_zip_codes.merge(texas_df_2016, left_on="ZCTA5", right_on="zip_code", how="left")
+
+tx_zip_hospitals = tx_zip_codes.merge(texas_summary_2016, left_on="ZCTA5", right_on="zip_code", how="left")
 
 # Replace NaN hospital counts with 0
-tx_zip_hospitals['hospital_count'] = tx_zip_hospitals['hospital_count'].fillna(0)
+tx_zip_hospitals['hospital_count'] = tx_zip_hospitals['hospital_count'].fillna(0).astype(int)
+
+tx_zip_hospitals.plot(column='hospital_count', legend=True)
+
+```
 
 
+```{python}
+tx_zip_hospitals.sort_values(by="hospital_count", ascending=False)
+
+# Check if any zip codes in texas_summary_2016 match those in tx_zip_codes
+matching_zip_codes = set(texas_summary_2016['zip_code']).intersection(set(tx_zip_codes['ZCTA5']))
+print("Number of matching zip codes:", len(matching_zip_codes))
 
 ```
 
