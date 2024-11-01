@@ -334,12 +334,18 @@ zip_codes = gpd.read_file("/Users/charleshuang/Downloads/gz_2010_us_860_00_500k/
 
 #Texas zip codes always start with 75, 76, or 77, and ZCTA5 is the column with the zip codes
 #Used ChatGPT to find a function that can identify strings by the first few characters
-tx_zip_codes = zip_codes[zip_codes["ZCTA5"].str.startswith(('75', '76', '77'))]
+tx_zip_codes = zip_codes[zip_codes["ZCTA5"].str.startswith(('75', '76', '77', '78', '79'))]
 
 print(tx_zip_codes.head())
 ```
 
-Now we calculate the # of hospitals per zip code in 2016 based on the previous step:
+Now we calculate the # of hospitals per zip code in 2016 based on the previous step (note: we want all hospitals in 2016, not just the ones that were open in 2016 and closed in 2019):
+
+
+```{python}
+
+
+```
 
 ```{python}
 
