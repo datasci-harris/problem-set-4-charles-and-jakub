@@ -464,11 +464,11 @@ tx_hospital_closures.sort_values("closures", ascending=False).head()
 
 #First turn zip_closures into a geodataframe, not a dataframe
 
-zip_closures_geo = tx_zip_codes.merge(zip_closures, left_on="ZCTA5", right_on="zip_code", how="inner")
-zip_closures_geo = zip_closures_geo.set_geometry('geometry_x') 
+zip_closures_geo = tx_zip_codes.merge(zip_closures, left_on="ZCTA5", right_on="zip_code", how="inner",  suffixes=("_tx", "_closure"))
+zip_closures_geo = zip_closures_geo.set_geometry('geometry') 
 
 tx_zip_codes = tx_zip_codes.to_crs(epsg=3857)
-zip_closures = zip_closures_geo.to_crs(epsg=3857)
+zip_closures_geo = zip_closures_geo.to_crs(epsg=3857)
 
 
 #Need to store the buffer result in a new GeoDataFrame
@@ -476,17 +476,23 @@ zip_closures_geo['buffered_geometry'] = zip_closures_geo.geometry.buffer(16093.4
 buffer_zone = zip_closures_geo.set_geometry('buffered_geometry')
 
 #Spatial join
-spatial_join = gpd.sjoin(tx_zip_codes, buffer_zone, how="inner", predicate="intersects")
+spatial_join = gpd.sjoin(tx_zip_codes, buffer_zone, how="inner", predicate="intersects", lsuffix="_left", rsuffix="_right")
 
 ```
 
 ```{python}
 
-num_indirectly_affected = spatial_join['ZCTA5_x'].nunique()
+num_indirectly_affected = spatial_join['ZCTA5__left'].nunique()
 print(f"Number of indirectly affected zip codes: {num_indirectly_affected}")
 
 ```
 
+```{python}
+#Test code
+print(spatial_join.columns)
+
+
+```
 
 
 4. Make a choropleth plot of the Texas zip codes with a different color for each of the 3 categories: directly affected by a closure, within 10 miles of closure but
