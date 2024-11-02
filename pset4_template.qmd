@@ -448,12 +448,9 @@ tx_zip_hospitals.plot(
 )
 plt.title("Number of Hospitals by Zip Code in Texas")
 plt.axis('off')
-plt.show()
 plt.savefig("texas_zip_map.png", format='png', bbox_inches='tight', dpi=300)
 
 ```
-
-![Number of Hospitals by Zip Code in Texas](texas_zip_map.png)
 
 ## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
 
@@ -607,7 +604,10 @@ avg_dist_hospital = join_to_hospital.groupby(
     'ZCTA5_left')['distance_hospital'].mean(
 ).reset_index()
 
-avg_dist_hospital.head()
+# Sort by descending for rendering purposes
+avg_dist_hospital_2 = avg_dist_hospital.sort_values(
+    by='distance_hospital', ascending=False)
+avg_dist_hospital_2.head()
 
 ```
 
@@ -648,8 +648,6 @@ plt.axis('off')
 plt.savefig("texas_map.png", format='png', bbox_inches='tight', dpi=300)
 
 ```
-
-![Texas Nearest Hospital Distance Map (miles)](texas_map.png)
 
 ## Effects of closures on access in Texas (15 pts)
 
