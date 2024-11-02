@@ -522,20 +522,7 @@ plt.show()
 ```
 
 
-```{python}
-#More testing
-# Check buffer_zone geometries and ZCTA5 values
-print(buffer_zone[['ZCTA5', 'buffered_geometry']].head())
-# Check intersection counts
-intersection_counts = gpd.sjoin(tx_zip_codes, buffer_zone, how="inner", predicate="intersects").shape[0]
-print(f"Total intersections found: {intersection_counts}")
-print(tx_zip_codes.crs, buffer_zone.crs)
-# Check for unique ZCTA5 values in tx_zip_codes and buffer_zone
-print(tx_zip_codes['ZCTA5'].unique())
-print(buffer_zone['ZCTA5'].unique())
 
-
-```
 
 4. Make a choropleth plot of the Texas zip codes with a different color for each of the 3 categories: directly affected by a closure, within 10 miles of closure but
 not directly affected, or not affected.
@@ -553,12 +540,16 @@ tx_zip_codes.loc[tx_zip_codes['ZCTA5'].isin(directly_affected_zips), 'status'] =
 print("Directly affected zips:", directly_affected_zips) 
 
 #Indirectly affected (but not directly affected)
-indirectly_affected_zips = buffer_zone['ZCTA5'].unique()
-tx_zip_codes.loc[
-    (tx_zip_codes['ZCTA5'].isin(indirectly_affected_zips)) &
-    (~tx_zip_codes['ZCTA5'].isin(directly_affected_zips)) 
-, 'status'] = 'Indirectly Affected'
-print("Indirectly affected zips:", indirectly_affected_zips)
+#This will require a spatial join
+# Perform the spatial join and rename the column immediately after for consistency
+spatial_join_df = gpd.sjoin(tx_zip_codes, buffer_zone, how="inner", predicate="intersects")
+spatial_join_df = spatial_join_df.rename(columns={'ZCTA5_left': 'ZCTA5'})
+
+indirectly_affected_zips = spatial_join_df['ZCTA5'].unique()
+
+# Filter out directly affected zip codes and update 'status'
+indirectly_affected_filtered = [z for z in indirectly_affected_zips if z not in directly_affected_zips]
+tx_zip_codes.loc[tx_zip_codes['ZCTA5'].isin(indirectly_affected_filtered), 'status'] = 'Indirectly Affected'
 
 #Plot the plots with tx_zip_code and status
 
@@ -574,16 +565,4 @@ plt.axis("off")
 plt.show()
 ```
 
-```{python}
-indirectly_affected_filtered = tx_zip_codes[
-    (tx_zip_codes['ZCTA5'].isin(indirectly_affected_zips)) &
-    (~tx_zip_codes['ZCTA5'].isin(directly_affected_zips))
-]
-print("Filtered indirectly affected zip codes:", indirectly_affected_filtered['ZCTA5'].unique())
-
-
-```
-
-
-```
 ## Reflecting on the exercise (10 pts) 
