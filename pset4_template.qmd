@@ -1,20 +1,11 @@
 ---
 title: "Problem Set 4: Spatial"
-format: 
+format:
   pdf:
-    keep-tex: true
-    include-in-header: 
-       text: |
-         \usepackage{fvextra}
-         \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
-include-before-body:
-  text: |
-    \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
-      showspaces = false,
-      showtabs = false,
-      breaksymbolleft={},
-      breaklines
-    }
+    code-overflow: wrap
+execute:
+  eval: true 
+  echo: true
 ---
 
 **PS4:** Due Sat Nov 2 at 5:00PM Central. Worth 100 points. 
@@ -40,9 +31,7 @@ include-before-body:
   -Facility Name (FAC_NAME)
   -Facility Zip (ZIP_CD)
 
-2. 
-    a. Import the pos2016.csv file and subset it:
-
+2. Import the pos2016.csv file and subset it:
 
 ```{python}
 
@@ -56,8 +45,10 @@ df = pd.read_csv('pos_2016.csv', encoding='Windows-1252', low_memory=False)
 import pandas as pd
 df = pd.read_csv('pos_2016.csv', encoding='Windows-1252', low_memory=False)
 
-df.columns = ["prvdr_subtype_code", "prvdr_category_code", "change_of_owner_date", "certification_date",
-              "facility_name", "prvdr_num", "zip_code", "termination_code", "termination_date"]
+df.columns = ["prvdr_subtype_code", "prvdr_category_code",
+              "change_of_owner_date", "certification_date",
+              "facility_name", "prvdr_num", "zip_code",
+              "termination_code", "termination_date"]
 
 # The date fields are numbers, so we need to change the numbers in the date fields to strings and then date objects. Attribution: Used ChatGPT to assist with regex issues
 df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(
@@ -77,9 +68,8 @@ df = df[(df["prvdr_category_code"] == 1) & (df["prvdr_subtype_code"] == 1)]
 
 ```
 
-  b. After subsetting to only short-term hospitals with these codes, we find 7245 hospitals in our data set. The provided KFF article cites a number of "nearly 5000".
-
-This discrepancy could be due to potential duplicates in our data (if a hospital was acquired or merged into a newer hospital, it may be counted twice). Additionally, our data may include hospitals that are short-term hospitals, but not specifically acute-care hospitals providing emergency care/surgery and other interventions, which the KFF article might exclude.
+    a. After subsetting to only short-term hospitals with these codes, we find 7245 hospitals in our data set. 
+    b. The provided KFF article cites a number of "nearly 5000".This discrepancy could be due to potential duplicates in our data (if a hospital was acquired or merged into a newer hospital, it may be counted twice). Additionally, our data may include hospitals that are short-term hospitals, but not specifically acute-care hospitals providing emergency care/surgery and other interventions, which the KFF article might exclude.
 
 3. Repeat the previous steps with 2017Q4, 2018Q4, and 2019Q4 and then append them together: 
 
@@ -161,8 +151,8 @@ unique_hospitals_by_year
 
 b. Not only are the plots different, we can see two things: 
 
-1. The maximum number of hospitals is much smaller than the maximum number of observations, implying there are a lot of repeat rows in the data for the same facilities.
-2. The graph of unique hospitals is much more skewed to the right than simply graphing observations, implying that either many new hospitals were certified from 2014 onwards, or that many old hospitals were merged/rebranded into new hospitals from 2014 onwards. Based on what we've read in the KFF article, it's highly likely that recent corporate/economic pressures caused hospitals to merge/rebrand leading to a rush of new certifications, rather than an actual increase in the amount of hospital capacity.
+    1. The maximum number of hospitals is much smaller than the maximum number of observations, implying there are a lot of repeat rows in the data for the same facilities.
+    2. The graph of unique hospitals is much more skewed to the right than simply graphing observations, implying that either many new hospitals were certified from 2014 onwards, or that many old hospitals were merged/rebranded into new hospitals from 2014 onwards. Based on what we've read in the KFF article, it's highly likely that recent corporate/economic pressures caused hospitals to merge/rebrand leading to a rush of new certifications, rather than an actual increase in the amount of hospital capacity.
 
 ## Identify hospital closures in POS file (15 pts) (*)
 
@@ -199,7 +189,7 @@ print(f"There are {len(closed_in_1718)
 
 ```
 
-There are 174 hospitals that fit this definition, but it's worth noting that some of the hospitals close and then reopen. Some of the reopenings are under different names but with the same provider code, and some are enitrely different. 
+There are 94 hospitals that fit this definition, but it's worth noting that some of the hospitals close and then reopen. Some of the reopenings are under different names but with the same provider code, and some are enitrely different. 
 
 2. Sort by name and report first 10.
 
@@ -363,16 +353,56 @@ print(tx_zip_codes.head())
 ```
 
 Now we calculate the # of hospitals per zip code in 2016 based on the previous step:
+(note: we are using the entire dataset of hospitals short term and active in 2016- this is the initial df file from Q4 2016)
+
+```{python}
+#Note: This counts only short term, active hospitals in Texas
+
+texas_df_2016 = df[df['zip_code'].astype(str).str.startswith(('75', '76', '77', '78', '79'))]
+
+
+texas_summary_2016 =  texas_df_2016.groupby('zip_code').size().reset_index()
+
+#Remove trailing decimal points from zip code
+texas_summary_2016['zip_code'] = texas_summary_2016['zip_code'].astype(str).str.split('.').str[0].str.zfill(5)
+
+texas_summary_2016.columns = ['zip_code', 'hospital_count']
+print(texas_summary_2016.sort_values(by="hospital_count", ascending=False))
+
+```
+
+Now we will create a choropleth of the hospitals in Texas by zip code:
 
 ```{python}
 
+import time
 import shapely
 from shapely import Polygon, Point
-import time
+import geopandas as gpd
 import matplotlib.pyplot as plt
+
 #We need to merge our previous hospital data with the shapefile zip_codes data:
 
+tx_zip_hospitals = tx_zip_codes.merge(texas_summary_2016, left_on="ZCTA5", right_on="zip_code", how="left")
+
+# Replace NaN hospital counts with 0
+tx_zip_hospitals['hospital_count'] = tx_zip_hospitals['hospital_count'].fillna(0).astype(int)
+
+#Attribution: ChatGPT suggested defining custom bins to make it easier to differentiate regions
+
+tx_zip_hospitals.plot(
+    column='hospital_count',
+    cmap='RdBu_r',
+    legend=True
+)
+plt.title("Number of Hospitals by Zip Code in Texas")
+plt.axis('off')
+plt.show()
+plt.savefig("texas_zip_map.png", format='png', bbox_inches='tight', dpi=300)
+
 ```
+
+![Number of Hospitals by Zip Code in Texas](texas_zip_map.png)
 
 ## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
 
@@ -527,7 +557,11 @@ avg_dist_hospital = join_to_hospital.groupby(
     'ZCTA5_left')['distance_hospital'].mean(
     ).reset_index()
 
+avg_dist_hospital.head()
+
 ```
+
+The first 10 results are printed above. The units are degrees (of latitude).
 
     b. Convert to miles. Makes sense?
 
@@ -536,7 +570,11 @@ avg_dist_hospital = join_to_hospital.groupby(
 avg_dist_hospital['distance_hospital_miles'] = avg_dist_hospital['distance_hospital'] * 69
 avg_dist_hospital = avg_dist_hospital.rename(columns={'ZCTA5_left':'ZCTA5'})
 
+np.mean(avg_dist_hospital['distance_hospital_miles'])
+
 ```
+
+The average distance to a hospital shows as 2.75 miles. This value does not make sense and is not entirely correct because we are assuming that within zip code distance is 0 miles. Zip code areas can range from small to large and it could be the case that someone lives 10 miles away, but in the same zip code, and they are still being classified as 0 miles. This number is grossly underprojected. 
 
     c. Map the value for each zip. 
 
@@ -553,6 +591,7 @@ avg_per_zip = zips_texas_centroids.merge(
 
 # Plot Texas. ChatGPT was used for assistance on the colors and how to save as png
 avg_per_zip.plot(column='distance_hospital_miles', cmap='RdBu_r', legend=True)
+plt.title("Average Distance to Nearest Hospital in Texas")
 plt.axis('off')
 plt.savefig("texas_map.png", format='png', bbox_inches='tight', dpi=300)
 
@@ -569,3 +608,8 @@ plt.savefig("texas_map.png", format='png', bbox_inches='tight', dpi=300)
 
 ## Reflecting on the exercise (10 pts) 
 
+- Potential issues: we can only measure "true closure", by that definition above, for hospitals who were suspected to close in 2017 or 2018. This is because we restricted the data to hospitals active in 2016 (so we're not measuring their potential closings), and we only have data up until 2019 (so we can't use 2020 data to determine if the closings of 2019 were true by the zip codes definition). Besides being limited to 2 years, another issue is that we are looking at total active hospitals in a zip code and using that to determine whether a closure was real. Hypothetically, if a hospital closed and a new one opened, that closure would be counted as fake. Futher, if a hospital closed in one zip code and moved to another (or two from different zips merged into one), we would be counting that as a "true" closure, when it was just a relocation that could have been hypothetically down the street, but in a different zip code. Lastly, if a hospital temporarily closed and was then reopened a year later, our methods would count this as a true closure, when that may no the case. 
+
+Better way: One solution is to look at clusters of zip codes. For example, instead of just looking at closures in 1 zip code, we can merge each zip code with each bordering zip code to create clusters which could avoid the issues of mergers or short relocations. We could also use the other hospital types to avoid a potential issue of a hospital reclasifying from short-term to something else, but still existing. 
+
+- Classifying zip codes as 'directly affected', 'indirectly affected', and 'not affected' with a threshold of 10 miles does do the a good job of reflecting changes in zip-code-level access to hospitals. From a google search, it's apparent that the average distance to a hospital in the United States is about 10 miles in rural areas (which is likely how this number was derived). To improve this measure, we would have to calculate the average and max distance to a hospital in each zip code and make those the parameters (average or less is directly affected, average to max is indirectly affected, max or more is not affected). This would be tailored to each zip code and would give us a better representation of the changes in access per zip code while taking into account their differences. 
