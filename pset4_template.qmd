@@ -416,7 +416,6 @@ zip_closures['zip_code'] = zip_closures['zip_code'].astype(str).str.split('.').s
 zip_closures.columns = ["zip_code", "closures"]
 zip_closures.sort_values("closures", ascending=False).head(10)
 
-len(zip_closures)
 
 
 ```
@@ -424,12 +423,167 @@ len(zip_closures)
 
 2. Plot a choropleth of which Texas zip codes were directly affected by a closure in 2016-2019 – there was at least one closure within the zip code. How many directly affected zip codes are there in Texas?
 
+
+To do this, we will again merge the tx_zip_codes data with our table from above:
+
 ```{python}
+
+
+tx_hospital_closures = tx_zip_codes.merge(zip_closures, left_on="ZCTA5", right_on="zip_code", how="left")
+
+#This line replaces NAs from the merge with zeroes- because zip codes not on our zip_closures list have 0 closures
+tx_hospital_closures['closures'] = tx_hospital_closures['closures'].fillna(0).astype(int)
+
+tx_hospital_closures.plot(
+    column='closures',
+    cmap='Reds',
+)
+plt.title("Zip Codes With Hospital Closures in Texas, 2016-2019")
+plt.axis('off')
+
+plt.show()
+
+```
+
+```{python}
+print(f"There were {len(zip_closures)} directly affected zip codes in Texas during this period.")
+
+```
+
+```{python}
+#test code
+tx_hospital_closures.sort_values("closures", ascending=False).head()
+
+```
+
+3. Then identify all the indirectly affected zip codes: Texas zip codes within a 10-mile radius of the directly affected zip codes. To do so, first create a GeoDataFrame of the directly affected zip codes. Then create a 10-mile buffer around them. Then, do a spatial join with the overall Texas zip code shapefile. How many indirectly affected zip codes are there in Texas?
+
+``` {python}
+#Buffer is measured in meters, so 10 meters is approx. 16,100 meters
+#Our directly affected zipcodes geodataframe is tx_hospital_closures
+
+#First turn zip_closures into a geodataframe, not a dataframe
+
+zip_closures_geo = tx_zip_codes.merge(zip_closures, left_on="ZCTA5", right_on="zip_code", how="inner")
+zip_closures_geo = zip_closures_geo.set_geometry('geometry_x') 
+
+tx_zip_codes = tx_zip_codes.to_crs(epsg=3857)
+zip_closures = zip_closures_geo.to_crs(epsg=3857)
+
+
+#Need to store the buffer result in a new GeoDataFrame
+zip_closures_geo['buffered_geometry'] = zip_closures_geo.geometry.buffer(16093.4)
+buffer_zone = zip_closures_geo.set_geometry('buffered_geometry')
+
+#Spatial join
+spatial_join = gpd.sjoin(tx_zip_codes, buffer_zone, how="inner", predicate="intersects")
+
+```
+
+```{python}
+
+num_indirectly_affected = spatial_join['ZCTA5_x'].nunique()
+print(f"Number of indirectly affected zip codes: {num_indirectly_affected}")
+
+```
+
+
+```{python}
+#Test Cell
+
+print(spatial_join.columns)
+
+```
+
+```{python}
+
+#TEST CODE ONLY, DO NOT INCLUDE IN FINAL
+
+import matplotlib.pyplot as plt
+
+# Create a plot to visualize the buffer zones and zip codes
+fig, ax = plt.subplots(figsize=(10, 10))
+
+# Plot all Texas zip codes in light gray for context
+tx_zip_codes.plot(ax=ax, color="lightgrey", edgecolor="white", label="All Texas Zip Codes")
+
+# Plot the buffer zones around directly affected zip codes in red with some transparency
+buffer_zone.plot(ax=ax, color="red", alpha=0.5, edgecolor="black", label="10-Mile Buffer Zone (Directly Affected)")
+
+# Optionally, plot the directly affected zip codes themselves
+zip_closures_geo.plot(ax=ax, color="blue", marker='o', label="Directly Affected Zip Codes")
+
+# Add a legend and title
+plt.legend()
+plt.title("Directly and Indirectly Affected Zip Codes in Texas (10-Mile Buffer Zone)")
+plt.axis("off")  # Hide axis for better visualization
+plt.show()
+
+```
+
+
+```{python}
+#More testing
+# Check buffer_zone geometries and ZCTA5 values
+print(buffer_zone[['ZCTA5', 'buffered_geometry']].head())
+# Check intersection counts
+intersection_counts = gpd.sjoin(tx_zip_codes, buffer_zone, how="inner", predicate="intersects").shape[0]
+print(f"Total intersections found: {intersection_counts}")
+print(tx_zip_codes.crs, buffer_zone.crs)
+# Check for unique ZCTA5 values in tx_zip_codes and buffer_zone
+print(tx_zip_codes['ZCTA5'].unique())
+print(buffer_zone['ZCTA5'].unique())
 
 
 ```
 
-3. 
-4. 
+4. Make a choropleth plot of the Texas zip codes with a different color for each of the 3 categories: directly affected by a closure, within 10 miles of closure but
+not directly affected, or not affected.
 
+To do this, we need to go back to tx_zip_codes and classify each zip code in one of the three categories:
+
+```{python}
+
+#Create a new status column and set all to Not Affected at first, then edit specific zips to be affected later
+tx_zip_codes['status'] = "Not Affected"
+
+#Directly affected
+directly_affected_zips = zip_closures_geo['ZCTA5'].unique()
+tx_zip_codes.loc[tx_zip_codes['ZCTA5'].isin(directly_affected_zips), 'status'] = 'Directly Affected'
+print("Directly affected zips:", directly_affected_zips) 
+
+#Indirectly affected (but not directly affected)
+indirectly_affected_zips = buffer_zone['ZCTA5'].unique()
+tx_zip_codes.loc[
+    (tx_zip_codes['ZCTA5'].isin(indirectly_affected_zips)) &
+    (~tx_zip_codes['ZCTA5'].isin(directly_affected_zips)) 
+, 'status'] = 'Indirectly Affected'
+print("Indirectly affected zips:", indirectly_affected_zips)
+
+#Plot the plots with tx_zip_code and status
+
+fig, ax = plt.subplots()
+tx_zip_codes.plot(column='status', cmap = 'Set1', legend=True, ax=ax)
+
+legend = ax.get_legend()
+if legend:  
+    legend.set_title("Zip Code Status")
+
+plt.title("Texas Zip Codes by Affected Status")
+plt.axis("off")
+plt.show()
+```
+
+```{python}
+indirectly_affected_filtered = tx_zip_codes[
+    (tx_zip_codes['ZCTA5'].isin(indirectly_affected_zips)) &
+    (~tx_zip_codes['ZCTA5'].isin(directly_affected_zips))
+]
+print("Filtered indirectly affected zip codes:", indirectly_affected_filtered['ZCTA5'].unique())
+
+
+```
+
+
+```
 ## Reflecting on the exercise (10 pts) 
