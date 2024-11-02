@@ -635,9 +635,12 @@ plt.savefig("texas_map.png", format='png', bbox_inches='tight', dpi=300)
 Returning to the corrected_closures data from the last section, we have 82 hospitals whose zips we will pull:
 ```{python}
 
-zip_closures = corrected_closures.groupby("zip_code").size().reset_index()
+zip_closures = corrected_closures.groupby("zip_code").size(
 
-zip_closures['zip_code'] = zip_closures['zip_code'].astype(str).str.split('.').str[0].str.zfill(5)
+).reset_index()
+
+zip_closures['zip_code'] = zip_closures['zip_code'].astype(
+    str).str.split('.').str[0].str.zfill(5)
 
 zip_closures.columns = ["zip_code", "closures"]
 zip_closures.sort_values("closures", ascending=False).head(10)
@@ -655,10 +658,15 @@ To do this, we will again merge the tx_zip_codes data with our table from above:
 ```{python}
 
 
-tx_hospital_closures = tx_zip_codes.merge(zip_closures, left_on="ZCTA5", right_on="zip_code", how="left")
+tx_hospital_closures = tx_zip_codes.merge(zip_closures,
+                                          left_on="ZCTA5", 
+                                          right_on="zip_code", 
+                                          how="left")
 
-#This line replaces NAs from the merge with zeroes- because zip codes not on our zip_closures list have 0 closures
-tx_hospital_closures['closures'] = tx_hospital_closures['closures'].fillna(0).astype(int)
+# This line replaces NAs from the merge with zeroes- 
+# because zip codes not on our zip_closures list have 0 closures
+tx_hospital_closures['closures'] = tx_hospital_closures[
+    'closures'].fillna(0).astype(int)
 
 tx_hospital_closures.plot(
     column='closures',
@@ -672,7 +680,8 @@ plt.show()
 ```
 
 ```{python}
-print(f"There were {len(zip_closures)} directly affected zip codes in Texas during this period.")
+print(f"There were {len(zip_closures)} directly \
+    affected zip codes in Texas during this period.")
 
 ```
 
@@ -685,24 +694,32 @@ tx_hospital_closures.sort_values("closures", ascending=False).head()
 3. Then identify all the indirectly affected zip codes: Texas zip codes within a 10-mile radius of the directly affected zip codes. To do so, first create a GeoDataFrame of the directly affected zip codes. Then create a 10-mile buffer around them. Then, do a spatial join with the overall Texas zip code shapefile. How many indirectly affected zip codes are there in Texas?
 
 ``` {python}
-#Buffer is measured in meters, so 10 meters is approx. 16,100 meters
-#Our directly affected zipcodes geodataframe is tx_hospital_closures
+# Buffer is measured in meters, so 10 meters is
+# approx. 16,100 meters
+# Our directly affected zipcodes geodataframe
+# is tx_hospital_closures
 
-#First turn zip_closures into a geodataframe, not a dataframe
+# First turn zip_closures into a geodataframe,
+# not a dataframe
 
-zip_closures_geo = tx_zip_codes.merge(zip_closures, left_on="ZCTA5", right_on="zip_code", how="inner",  suffixes=("_tx", "_closure"))
-zip_closures_geo = zip_closures_geo.set_geometry('geometry') 
+zip_closures_geo = tx_zip_codes.merge(zip_closures, left_on="ZCTA5", right_on="zip_code", how="inner",
+                                      suffixes=("_tx", "_closure"))
+zip_closures_geo = zip_closures_geo.set_geometry(
+    'geometry')
 
 tx_zip_codes = tx_zip_codes.to_crs(epsg=3857)
 zip_closures_geo = zip_closures_geo.to_crs(epsg=3857)
 
 
-#Need to store the buffer result in a new GeoDataFrame
-zip_closures_geo['buffered_geometry'] = zip_closures_geo.geometry.buffer(16093.4)
+# Need to store the buffer result in a new GeoDataFrame
+zip_closures_geo['buffered_geometry'] = zip_closures_geo.geometry.buffer(
+    16093.4)
 buffer_zone = zip_closures_geo.set_geometry('buffered_geometry')
 
-#Spatial join
-spatial_join = gpd.sjoin(tx_zip_codes, buffer_zone, how="inner", predicate="intersects", lsuffix="_left", rsuffix="_right")
+# Spatial join
+spatial_join = gpd.sjoin(tx_zip_codes, buffer_zone,
+                         how="inner", predicate="intersects",
+                         lsuffix="_left", rsuffix="_right")
 
 ```
 
@@ -721,33 +738,38 @@ To do this, we need to go back to tx_zip_codes and classify each zip code in one
 
 ```{python}
 
-#Create a new status column and set all to Not Affected at first, then edit specific zips to be affected later
+# Create a new status column and set all to Not Affected at first,
+# then edit specific zips to be affected later
 tx_zip_codes['status'] = "Not Affected"
 
-#Directly affected
+# Directly affected
 directly_affected_zips = zip_closures_geo['ZCTA5'].unique()
-tx_zip_codes.loc[tx_zip_codes['ZCTA5'].isin(directly_affected_zips), 'status'] = 'Directly Affected'
-print("Directly affected zips:", directly_affected_zips) 
+tx_zip_codes.loc[tx_zip_codes['ZCTA5'].isin(
+    directly_affected_zips), 'status'] = 'Directly Affected'
+print("Directly affected zips:", directly_affected_zips)
 
-#Indirectly affected (but not directly affected)
-#This will require a spatial join
+# Indirectly affected (but not directly affected)
+# This will require a spatial join
 # Perform the spatial join and rename the column immediately after for consistency
-spatial_join_df = gpd.sjoin(tx_zip_codes, buffer_zone, how="inner", predicate="intersects")
+spatial_join_df = gpd.sjoin(
+    tx_zip_codes, buffer_zone, how="inner", predicate="intersects")
 spatial_join_df = spatial_join_df.rename(columns={'ZCTA5_left': 'ZCTA5'})
 
 indirectly_affected_zips = spatial_join_df['ZCTA5'].unique()
 
 # Filter out directly affected zip codes and update 'status'
-indirectly_affected_filtered = [z for z in indirectly_affected_zips if z not in directly_affected_zips]
-tx_zip_codes.loc[tx_zip_codes['ZCTA5'].isin(indirectly_affected_filtered), 'status'] = 'Indirectly Affected'
+indirectly_affected_filtered = [
+    z for z in indirectly_affected_zips if z not in directly_affected_zips]
+tx_zip_codes.loc[tx_zip_codes['ZCTA5'].isin(
+    indirectly_affected_filtered), 'status'] = 'Indirectly Affected'
 
-#Plot the plots with tx_zip_code and status
+# Plot the plots with tx_zip_code and status
 
 fig, ax = plt.subplots()
-tx_zip_codes.plot(column='status', cmap = 'Set1', legend=True, ax=ax)
+tx_zip_codes.plot(column='status', cmap='Set1', legend=True, ax=ax)
 
 legend = ax.get_legend()
-if legend:  
+if legend:
     legend.set_title("Zip Code Status")
 
 plt.title("Texas Zip Codes by Affected Status")

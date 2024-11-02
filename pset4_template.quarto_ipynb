@@ -1,0 +1,1112 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "title: \"Problem Set 4: Spatial\"\n",
+        "format:\n",
+        "  pdf:\n",
+        "    code-overflow: wrap\n",
+        "execute:\n",
+        "  eval: true \n",
+        "  echo: true\n",
+        "---"
+      ],
+      "id": "21f7a034"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# the following code will turn off any Python warnings in your code output\n",
+        "import warnings\n",
+        "warnings.filterwarnings(\"ignore\")"
+      ],
+      "id": "d0db9114",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "**PS4:** Due Sat Nov 2 at 5:00PM Central. Worth 100 points. \n",
+        "\n",
+        "## Style Points (10 pts)\n",
+        "\n",
+        "## Submission Steps (10 pts)\n",
+        "\n",
+        "## Download and explore the Provider of Services (POS) file (10 pts)\n",
+        "\n",
+        "(Note: Used ChatGPT to troubleshoot why pd.read_csv wasn't working- learned to specify a different encoding other than utf-8)\n",
+        "\n",
+        "\n",
+        "1. Which variables do we need to complete the exercise:\n",
+        "- Short-term hospitals\n",
+        "  -Certification Date (CRTFCTN_DT)\n",
+        "  -Change of ownership date (CHOW_DT)\n",
+        "  -Provider code 1 (PRVDR_CTGRY_CD)\n",
+        "  -subtype 1 (PRVDR_CTGRY_SBTYP_CD)\n",
+        "  -CMS Certification number (PRVDR_NUM)\n",
+        "  -Termination Code (PGM_TRMNTN_CD)\n",
+        "  -Termination Date (TRMNTN_EXPRTN_DT)\n",
+        "  -Facility Name (FAC_NAME)\n",
+        "  -Facility Zip (ZIP_CD)\n",
+        "\n",
+        "2. Import the pos2016.csv file and subset it:\n"
+      ],
+      "id": "c25227d1"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import pandas as pd\n",
+        "df = pd.read_csv('pos_2016.csv', encoding='Windows-1252', low_memory=False)\n",
+        "\n",
+        "df.columns = [\"prvdr_subtype_code\", \"prvdr_category_code\", \"change_of_owner_date\", \"certification_date\",\n",
+        "              \"facility_name\", \"prvdr_num\", \"zip_code\", \"termination_code\", \"termination_date\"]\n",
+        "\n",
+        "# The date fields are numbers, so we need to change the numbers in the date fields to strings and then date objects. Attribution: Used ChatGPT to assist with regex issues\n",
+        "df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(\n",
+        "    str).str.replace('.0', '', regex=False), format='%Y%m%d')\n",
+        "\n",
+        "df['certification_date'] = pd.to_datetime(df['certification_date'].astype(\n",
+        "    str).str.replace('.0', '', regex=False), format='%Y%m%d')\n",
+        "\n",
+        "df['termination_date'] = pd.to_datetime(df['termination_date'].astype(\n",
+        "    str).str.replace('.0', '', regex=False), format='%Y%m%d')\n",
+        "\n",
+        "# Convert zip code and termination codes to strings\n",
+        "df['termination_code'] = df['termination_code'].astype(str)\n",
+        "df['zip_code'] = df['zip_code'].astype(str)\n",
+        "\n",
+        "df = df[(df[\"prvdr_category_code\"] == 1) & (df[\"prvdr_subtype_code\"] == 1)]"
+      ],
+      "id": "3765731b",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "    a. After subsetting to only short-term hospitals with these codes, we find 7245 \n",
+        "    hospitals in our data set. \n",
+        "    b. The provided KFF article cites a number of \"nearly 5000\".This discrepancy \n",
+        "    could be due to potential duplicates in our data (if a hospital was acquired \n",
+        "    or merged into a newer hospital, it may be counted twice). Additionally, our \n",
+        "    data may include hospitals that are short-term hospitals, but not specifically \n",
+        "    acute-care hospitals providing emergency care/surgery and other interventions, \n",
+        "    which the KFF article might exclude.\n",
+        "\n",
+        "3. Repeat the previous steps with 2017Q4, 2018Q4, and 2019Q4 and then append them together: \n"
+      ],
+      "id": "929ff875"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "def read_clean_filter(pathname):\n",
+        "    \"\"\"Reads the raw csv files from CMS, renames the columns, and filters to \n",
+        "    only short term hospitals.\n",
+        "    Also updates the date columns to pd.datetime format\n",
+        "    \"\"\"\n",
+        "    df = pd.read_csv(pathname, encoding='Windows-1252', low_memory=False)\n",
+        "\n",
+        "    df.columns = [\"prvdr_subtype_code\", \"prvdr_category_code\",\n",
+        "                  \"change_of_owner_date\", \"certification_date\",\n",
+        "                  \"facility_name\", \"prvdr_num\", \"zip_code\",\n",
+        "                  \"termination_code\", \"termination_date\"]\n",
+        "\n",
+        "    df['change_of_owner_date'] = pd.to_datetime(df['change_of_owner_date'].astype(\n",
+        "        str).str.replace('.0', '', regex=False), format='%Y%m%d')\n",
+        "\n",
+        "    df['certification_date'] = pd.to_datetime(df['certification_date'].astype(\n",
+        "        str).str.replace('.0', '', regex=False), format='%Y%m%d')\n",
+        "        \n",
+        "    df['termination_date'] = pd.to_datetime(df['termination_date'].astype(\n",
+        "        str).str.replace('.0', '', regex=False), format='%Y%m%d')\n",
+        "\n",
+        "    df['termination_code'] = df['termination_code'].astype(str)\n",
+        "    df['zip_code'] = df['zip_code'].astype(str)\n",
+        "\n",
+        "    df = df[(df[\"prvdr_category_code\"] == 1) & (df[\"prvdr_subtype_code\"] == 1)]\n",
+        "\n",
+        "    return df\n",
+        "\n",
+        "df_2017 = read_clean_filter(\"pos_2017.csv\")\n",
+        "df_2018 = read_clean_filter(\"pos_2018.csv\")\n",
+        "df_2019 = read_clean_filter(\"pos_2019.csv\")\n",
+        "\n",
+        "# Merge all dataframes from 2016-2019 together\n",
+        "# Use this for future pset problems\n",
+        "\n",
+        "df_all = pd.concat([df, df_2017, df_2018, df_2019], ignore_index=True)"
+      ],
+      "id": "14764139",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Now we plot the # of observations in the dataset by year of certification date:\n"
+      ],
+      "id": "1f1b3242"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import altair as alt\n",
+        "\n",
+        "df_all['year'] = df_all['certification_date'].dt.year\n",
+        "summary = df_all.groupby('year').size().reset_index(name='count')\n",
+        "\n",
+        "observations_by_year = alt.Chart(summary).mark_bar().encode(\n",
+        "    x=alt.X('year:O', title=\"Year\"),\n",
+        "    y=alt.Y('count', title=\"Number of Observations\")\n",
+        ")\n",
+        "\n",
+        "observations_by_year.save('observations_by_year.png')"
+      ],
+      "id": "edf9dfed",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "![Observations per Year (2016-2019)](observations_by_year.png)\n",
+        "\n",
+        "4. \n",
+        "a. Now we repeat the previous step but this time plot unique hospitals by year instead of just observations:\n"
+      ],
+      "id": "749aea00"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "unique_hospitals = df_all.drop_duplicates(subset=['prvdr_num', 'year'])\n",
+        "unique_summary = unique_hospitals.groupby(\n",
+        "    'year').size().reset_index(name='count')\n",
+        "\n",
+        "unique_hospitals_by_year = alt.Chart(unique_summary).mark_bar().encode(\n",
+        "    x=alt.X('year:O', title=\"Year\"),\n",
+        "    y=alt.Y('count', title=\"Number of Unique Hospitals\")\n",
+        ")\n",
+        "\n",
+        "unique_hospitals_by_year.save('unique_hospitals_by_year.png')"
+      ],
+      "id": "14ed0b77",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "![Unique Hospitals per Year (2016-2019)](unique_hospitals_by_year.png)\n",
+        "\n",
+        "b. Not only are the plots different, we can see two things: \n",
+        "\n",
+        "    1. The maximum number of hospitals is much smaller than the maximum number of observations, implying there are a lot of repeat rows in the data for the same facilities.\n",
+        "    2. The graph of unique hospitals is much more skewed to the right than simply graphing observations, implying that either many new hospitals were certified from 2014 onwards, or that many old hospitals were merged/rebranded into new hospitals from 2014 onwards. Based on what we've read in the KFF article, it's highly likely that recent corporate/economic pressures caused hospitals to merge/rebrand leading to a rush of new certifications, rather than an actual increase in the amount of hospital capacity.\n",
+        "\n",
+        "## Identify hospital closures in POS file (15 pts) (*)\n"
+      ],
+      "id": "d9048753"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import geopandas\n",
+        "import numpy as np\n",
+        "import geopandas as gpd\n",
+        "import matplotlib as plt"
+      ],
+      "id": "1cdd879c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "b. Not only are the plots different, we can see two things: \n",
+        "\n",
+        "1. The maximum number of hospitals is much smaller than the maximum number of observations, implying there are a lot of repeat rows in the data for the same facilities.\n",
+        "2. The graph of unique hospitals is much more skewed to the right than simply graphing observations, implying that either many new hospitals were certified from 2014 onwards, or that many old hospitals were merged/rebranded into new hospitals from 2014 onwards. Based on what we've read in the KFF article, it's highly likely that recent corporate/economic pressures caused hospitals to merge/rebrand leading to a rush of new certifications, rather than an actual increase in the amount of hospital capacity.\n",
+        "\n",
+        "\n",
+        "## Identify hospital closures in POS file (15 pts) (*)\n",
+        "\n",
+        "1. Create a list of hospitals active in 2016, closed by 2019 (facility name, zip, year of closure). How many are there?\n"
+      ],
+      "id": "6577c80d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#Create a list of all hospitals active in 2016:\n",
+        "df_2016_active = df[df[\"termination_code\"] == \"0\"]\n",
+        "\n",
+        "#Now go back to original dataset and find zip codes where the number of active hospitals does not decrease in the year after the suspected closure.\n",
+        "\n",
+        "#By definition, we don't have 2020 data for 2019 closures, and if we are looking at all 2016 active hospitals, 2017 is irrelevant.\n",
+        "#So we are looking only at hospitals that closed in 2017 and 2018.\n",
+        "\n",
+        "closed_in_1718 = df_all[(df_all[\"termination_date\"] >= \"2017-01-01\") & (df_all[\"termination_date\"] <= \"2018-12-31\")]\n",
+        "\n",
+        "#Now remove duplicates:\n",
+        "closed_in_1718 = closed_in_1718.drop_duplicates(subset='prvdr_num')\n",
+        "\n",
+        "#These are the hospitals in our dataset that closed in 2017-2018.\n",
+        "print(f\"There are {len(closed_in_1718)} hospitals that closed during this period.\")"
+      ],
+      "id": "b139157c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "2. Sort this list of hospitals by name and report the names and year of\n",
+        "suspected closure for the first 10 rows.\n"
+      ],
+      "id": "e5235007"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "closed_in_1718.sort_values(by='facility_name', ascending=True, inplace=True)\n",
+        "\n",
+        "closed_in_1718.head(10)"
+      ],
+      "id": "c9378270",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "There are 94 hospitals that fit this definition, but it's worth noting that some of the hospitals close and then reopen. Some of the reopenings are under different names but with the same provider code, and some are entirely different. \n",
+        "\n",
+        "\n",
+        "3. However, not all suspected hospital closures are true closures. For example, in the case of a merger, a CMS certification number will be appear to be “terminated,” but then the hospital re-appear under a similar name/address with a new CMS certification number in the next year. As a first pass to address this, remove any suspected hospital closures that are in zip codes where the number of active hospitals does not decrease in the year after the suspected closure.\n"
+      ],
+      "id": "07573f68"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Now for each closure, we need to check its zip code and see if it was a zip \n",
+        "# code where the number of active hospitals did not decrease the year after \n",
+        "# its closure.\n",
+        "# We can take the df_2017 data set only, and do a summary that counts \n",
+        "# the number of active hospitals by zip code. Then do the same for df_2018 and \n",
+        "# df_2019. Now we have three tables showing the breakdown of each zipcodes' \n",
+        "# active hospitals for each year.\n",
+        "\n",
+        "# Attribution: Originally tried this with a for loop, but ChatGPT suggested \n",
+        "# using a dictionary to store the summary tables instead\n",
+        "\n",
+        "active_hospital_summaries = {}\n",
+        "\n",
+        "# Iterate through each DataFrame and generate the summary table\n",
+        "for year, df_x in zip(['2017', '2018', '2019'], [df_2017, df_2018, df_2019]):\n",
+        "\n",
+        "    df_x['is_active'] = df_x['termination_code'] == \"0\"\n",
+        "    active_hospitals = df_x.groupby(\n",
+        "        'zip_code')['is_active'].sum().reset_index()\n",
+        "\n",
+        "    # Store summary table in the dictionary\n",
+        "    active_hospital_summaries[f'active_hospitals_{year}'] = active_hospitals\n",
+        "\n",
+        "# for readability\n",
+        "ah_2017 = active_hospital_summaries['active_hospitals_2017']\n",
+        "ah_2018 = active_hospital_summaries['active_hospitals_2018']\n",
+        "ah_2019 = active_hospital_summaries['active_hospitals_2019']"
+      ],
+      "id": "53496158",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Now we need to use these tables to create a way for us to check: when we provide our function a hospital closure, how can our function check to see if it was in a zip code where the number of active hospitals did not decrease the year after its closure?\n",
+        "We can do this by taking our summary tables and merging them:\n"
+      ],
+      "id": "a1e3f500"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "ah_2017 = ah_2017.rename(columns={'is_active': 'active_2017'})\n",
+        "ah_2018 = ah_2018.rename(columns={'is_active': 'active_2018'})\n",
+        "\n",
+        "comp_2017_2018 = pd.merge(ah_2017, ah_2018, on=\"zip_code\", how=\"outer\")\n",
+        "\n",
+        "# This handles any zip codes that were not present in 2017 or 2018 and now \n",
+        "# have a NA as part of the merge\n",
+        "comp_2017_2018.fillna(0, inplace=True)\n",
+        "\n",
+        "# Now create a col that puts a boolean value if a zip code's active hospitals \n",
+        "# decreased from 2017-2018\n",
+        "comp_2017_2018['did_decrease'] = (\n",
+        "    comp_2017_2018['active_2017'] > comp_2017_2018['active_2018']).astype(int)\n",
+        "\n",
+        "# And repeat for 2018-2019\n",
+        "ah_2019 = ah_2019.rename(columns={'is_active': 'active_2017'})\n",
+        "comp_2018_2019 = pd.merge(ah_2018, ah_2019, on=\"zip_code\", how=\"outer\")\n",
+        "comp_2018_2019.fillna(0, inplace=True)\n",
+        "comp_2018_2019['did_decrease'] = (\n",
+        "    comp_2018_2019['active_2017'] > comp_2018_2019['active_2018']).astype(int)"
+      ],
+      "id": "7d1065cd",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Now we have our two comparison tables, so let's write a function that goes through closed_in_1718 that does the following:\n"
+      ],
+      "id": "fdd32435"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "def check_zip(closed_df, comp_2017_2018, comp_2018_2019):\n",
+        "    \"\"\"\n",
+        "    # create a placeholder list for decreasing zipcodes (see below)\n",
+        "    # take the zipcode of the current row and check the termination_date's year\n",
+        "    # depending on whether the termination_date's year is 2017 or 2018, refer \n",
+        "    # to the comp_2017_2018 or the comp_2018_2019 table\n",
+        "    # Take the zipcode of the current row and check whether that zipcode has a \n",
+        "    # 0 or 1 in the \"did_decrease\" column\n",
+        "    # if that zipcode has a 1 in that column, add it to the decreasing zipcodes\n",
+        "    # list the function should return a list of all zipcodes that had decreasing \n",
+        "    # hospitals\n",
+        "    \"\"\"\n",
+        "\n",
+        "    dc_zip = []\n",
+        "\n",
+        "    zip_codes = closed_df['zip_code']\n",
+        "    termination_years = closed_df['termination_date'].dt.year\n",
+        "\n",
+        "    for zip_code, year in zip(zip_codes, termination_years):\n",
+        "        # Select the appropriate comparison table based on the termination year\n",
+        "        if year == 2017:\n",
+        "            comp_table = comp_2017_2018\n",
+        "        elif year == 2018:\n",
+        "            comp_table = comp_2018_2019\n",
+        "        else:\n",
+        "            # Skip if the termination year is not 2017 or 2018\n",
+        "            continue\n",
+        "\n",
+        "        # Check if the zip code exists in the comparison table and if it \n",
+        "        # shows a decrease\n",
+        "        if zip_code in comp_table['zip_code'].values:\n",
+        "            did_decrease = comp_table.loc[comp_table['zip_code']\n",
+        "                                          == zip_code, 'did_decrease'].values[0]\n",
+        "\n",
+        "            # If the zip code had a decrease in active hospitals, add it to the list\n",
+        "            if did_decrease == 1:\n",
+        "                dc_zip.append(zip_code)\n",
+        "\n",
+        "    return dc_zip\n",
+        "\n",
+        "decreasing_zipcodes = check_zip(closed_in_1718, comp_2017_2018, comp_2018_2019)"
+      ],
+      "id": "8084a6cf",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "  a. Now we have a list of decreasing zipcodes, these are likely mergers/acquisitions:\n"
+      ],
+      "id": "753f0f2e"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "md-indent": "  "
+      },
+      "source": [
+        "print(len(decreasing_zipcodes))"
+      ],
+      "id": "0947e904",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "There are 12 hospitals that fit this definition.\n",
+        "\n",
+        "  b. After correcting for this, how many hospitals do you have left?\n",
+        "  \n",
+        "94 - 12 hospitals = 82 hospitals left.\n",
+        "\n",
+        "  c. Sort this list of corrected hospital closures by name and report the first 10 rows.\n"
+      ],
+      "id": "6600b9f0"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Attribution: ChatGPT- Using ~ is the \"not\" operator (originally tried to\n",
+        "# do this with an != sign)\n",
+        "corrected_closures = closed_in_1718[\n",
+        "    ~closed_in_1718['zip_code'].isin(decreasing_zipcodes)]\n",
+        "\n",
+        "corrected_closures.sort_values(\n",
+        "    by='facility_name', ascending=True, inplace=True)\n",
+        "\n",
+        "# Limiting columns for rendering purposes\n",
+        "corrected_closures_2 = corrected_closures[['facility_name','zip_code','year']]\n",
+        "corrected_closures_2.head(10)"
+      ],
+      "id": "a06c7b86",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Download Census zip code shapefile (10 pt) \n",
+        "\n",
+        "1. \n",
+        "    a. The five file types are:\n",
+        "      1. .shp - The file that contains the actual geoms (points, lines, polygons) that will be displayed\n",
+        "      2. .dbf - Stores attribute data for each shape in the .shp file, like population, income, temperature, etc. \n",
+        "      3. .shx - An index file that points to specific shapes in the .shp file for easier navigation\n",
+        "      4. .prj - A projection file that stores the coordinate information for latitude/longitude \n",
+        "      5. .xml - Metadata file that is mostly used for documentation/readme purposes, including data sources, attributes, etc.\n",
+        "\n",
+        "    b. The .shp file is the largest at 837.5 MB, while the other files are:\n",
+        "      .dbf - 6.4 MB\n",
+        "      .shx - 0.26 MB\n",
+        "      .xml - 16 KB\n",
+        "      .prj - 0.16 KB\n",
+        "\n",
+        "2. To open the shapefile, we will install and use geopandas:\n"
+      ],
+      "id": "3821dd69"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import geopandas as gpd\n",
+        "zip_codes = gpd.read_file(\n",
+        "    \"/Users/jakub/Downloads/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shp\")\n",
+        "\n",
+        "# Texas zip codes always start with 75, 76, 77, 78, or 79, and ZCTA5 is the column with the zip codes \n",
+        "# Used ChatGPT to find a function startswith that can identify strings by the first few characters\n",
+        "tx_zip_codes = zip_codes[\n",
+        "    zip_codes[\"ZCTA5\"].str.startswith(('75', '76', '77', '78', '79'))]"
+      ],
+      "id": "36dac240",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Now we calculate the # of hospitals per zip code in 2016 based on the previous step:\n",
+        "(note: we are using the entire dataset of hospitals short term and active in 2016- this is the initial df file from Q4 2016)\n"
+      ],
+      "id": "7a1b2cf3"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Note: This counts only short term, active hospitals in Texas\n",
+        "\n",
+        "texas_df_2016 = df[df['zip_code'].astype(str).str.startswith(\n",
+        "    ('75', '76', '77', '78', '79'))]\n",
+        "\n",
+        "\n",
+        "texas_summary_2016 = texas_df_2016.groupby('zip_code').size().reset_index()\n",
+        "\n",
+        "# Remove trailing decimal points from zip code\n",
+        "texas_summary_2016['zip_code'] = texas_summary_2016['zip_code'].astype(\n",
+        "    str).str.split('.').str[0].str.zfill(5)\n",
+        "\n",
+        "texas_summary_2016.columns = ['zip_code', 'hospital_count']\n",
+        "print(texas_summary_2016.sort_values(by=\"hospital_count\", ascending=False))"
+      ],
+      "id": "5aa3c626",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Now we will create a choropleth of the hospitals in Texas by zip code:\n"
+      ],
+      "id": "82204a6b"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import time\n",
+        "import shapely\n",
+        "from shapely import Polygon, Point\n",
+        "import geopandas as gpd\n",
+        "import matplotlib.pyplot as plt\n",
+        "\n",
+        "# We need to merge our previous hospital data with the shapefile zip_codes data:\n",
+        "\n",
+        "tx_zip_hospitals = tx_zip_codes.merge(\n",
+        "    texas_summary_2016, left_on=\"ZCTA5\", right_on=\"zip_code\", how=\"left\")\n",
+        "\n",
+        "# Replace NaN hospital counts with 0\n",
+        "tx_zip_hospitals['hospital_count'] = tx_zip_hospitals[\n",
+        "    'hospital_count'].fillna(0).astype(int)\n",
+        "\n",
+        "tx_zip_hospitals.plot(\n",
+        "    column='hospital_count',\n",
+        "    cmap='RdBu_r',\n",
+        "    legend=True\n",
+        ")\n",
+        "plt.title(\"Number of Hospitals by Zip Code in Texas\")\n",
+        "plt.axis('off')\n",
+        "plt.savefig(\"texas_zip_map.png\", format='png', bbox_inches='tight', dpi=300)"
+      ],
+      "id": "91523c99",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Calculate zip code’s distance to the nearest hospital (20 pts) (*)\n",
+        "\n",
+        "1. GeoDataFrame for centroid of each zip code nationally, dimensions, columns. \n"
+      ],
+      "id": "b2b82c50"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "zips_all_centroids = zip_codes.copy()\n",
+        "zips_all_centroids['centroid'] = zip_codes['geometry'].centroid\n",
+        "zips_all_centroids.total_bounds\n",
+        "print(zips_all_centroids.columns)"
+      ],
+      "id": "9d0a243a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The total bounds (dimensions) of the resulting GeoDataFrame are [-176.684744, 17.910817, -65.224638, 71.341324]. The columns are:\n",
+        "- GEO_ID - a unique identifier for some geographic area. The last 5 numbers appear to the be zip code.\n",
+        "- ZCTA5 - Zip Code Tabulation Area, represents 1 or a group of zip codes. \n",
+        "- NAME - name of the area, appears to be the same as zip code.\n",
+        "- geometry - identifies the shape (polygon or multipolygon), as well as the specific points it uses to create the shape. \n",
+        "- centroid - identifies the centroid of the shape as a single point. \n",
+        "\n",
+        "2. Subset above into texas & texas or bordering state. \n"
+      ],
+      "id": "74183352"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Convert Texas zips into list & cross-reference\n",
+        "tx_zip_codes_list = tx_zip_codes['ZCTA5'].tolist()\n",
+        "zips_texas_centroids = zips_all_centroids[zips_all_centroids['ZCTA5'].isin(\n",
+        "    tx_zip_codes_list)]\n",
+        "print(len(zips_texas_centroids))\n",
+        "\n",
+        "# Oklahoma, Arkansas, Louisiana, New Mexico\n",
+        "tx_border_zip_codes = zip_codes[zip_codes[\"ZCTA5\"].str.startswith(\n",
+        "    ('7', '87', '88'))]\n",
+        "tx_border_zip_codes_list = tx_border_zip_codes['ZCTA5'].tolist()\n",
+        "zips_texas_borderstates_centroids = zips_all_centroids[zips_all_centroids[\n",
+        "    'ZCTA5'].isin(tx_border_zip_codes_list)]\n",
+        "print(len(zips_texas_borderstates_centroids))"
+      ],
+      "id": "1f69cb48",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "There are 1,935 unique zip codes in Texas and 4,057 unique zip codes in Texas or a bordering state.\n",
+        "\n",
+        "3. Subset that contains at least 1 hospital\n"
+      ],
+      "id": "a9256adf"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Create temporary, smaller dataframes for this purpose\n",
+        "df_2016_temp = df[['facility_name', 'prvdr_num',\n",
+        "                   'zip_code', 'termination_code']]\n",
+        "df_2017_temp = df_2017[['facility_name',\n",
+        "                        'prvdr_num', 'zip_code', 'termination_code']]\n",
+        "df_2018_temp = df_2018[['facility_name',\n",
+        "                        'prvdr_num', 'zip_code', 'termination_code']]\n",
+        "df_2019_temp = df_2019[['facility_name',\n",
+        "                        'prvdr_num', 'zip_code', 'termination_code']]\n",
+        "# Merge them on provider number to have all the term codes together by year\n",
+        "df_terms = df_2016_temp.merge(df_2017_temp, on=['prvdr_num'],\n",
+        "                              how='outer', suffixes=('', '_2017')\n",
+        "                              ).merge(df_2018_temp, on=['prvdr_num'],\n",
+        "                                      how='outer', suffixes=('', '_2018')\n",
+        "                                      ).merge(df_2019_temp, on=['prvdr_num'],\n",
+        "                                              how='outer', suffixes=('', '_2019'))\n",
+        "# Rename 2016 column & filter for only those active in 2016\n",
+        "df_terms = df_terms.rename(\n",
+        "    columns={'termination_code': 'termination_code_2016', \n",
+        "    'zip_code': 'zip_code_2016'})\n",
+        "df_terms = df_terms[df_terms['termination_code_2016'] == '0']"
+      ],
+      "id": "24c39073",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Make sure they're the same type\n",
+        "active_2016 = df_terms['zip_code_2016'].str.replace(\n",
+        "    '.0', '', regex=False).astype(int)\n",
+        "zips_texas_borderstates_centroids['ZCTA5'] = zips_texas_borderstates_centroids[\n",
+        "    'ZCTA5'].astype(int)\n",
+        "\n",
+        "zips_withhospital_centroids = zips_texas_borderstates_centroids.merge(\n",
+        "    active_2016, left_on='ZCTA5', right_on='zip_code_2016', how='inner')\n",
+        "print(len(zips_withhospital_centroids))"
+      ],
+      "id": "780a5f46",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "We did an inner merge because we only want to keep the rows from zips_texasborderstates_centroids that have an active hospital in them and retain the geodata. We don't need any of the other information from the hospitals dataset. We merged left on ZCTA5 and right on zip_code_2016 because both of these variables contain zip codes. The result is 556 Texas or bordering states zip codes with hospitals out of the 4,057 total zip codes we found earlier. \n",
+        "\n",
+        "4. Calculate distance to nearest zip code w hospital.\n",
+        "    a. Subset to 10 & time it. Estimate total time. \n"
+      ],
+      "id": "b3ea0d26"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Subset only 10 observations. data_for_join only zcta5 and geometry\n",
+        "zips_texas_centroids_10 = zips_texas_centroids.head(10)\n",
+        "data_for_join_10 = zips_texas_centroids_10[[\"ZCTA5\", \"geometry\"]]\n",
+        "\n",
+        "# Spatial join based on lecure slides\n",
+        "# Asked ChatGPT how to time a function to get that part\n",
+        "start_time_10 = time.time()\n",
+        "join_to_hospital_10 = gpd.sjoin_nearest(\n",
+        "    data_for_join_10,\n",
+        "    zips_withhospital_centroids,\n",
+        "    how='inner',\n",
+        "    distance_col=\"distance_hospital\")\n",
+        "end_time_10 = time.time()\n",
+        "\n",
+        "elapsed_time_10 = end_time_10 - start_time_10\n",
+        "print(elapsed_time_10)\n",
+        "full_estimate = elapsed_time_10 * (556/10)\n",
+        "print(full_estimate)"
+      ],
+      "id": "4b8b1dd7",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "It took about 0.6 seconds to run this subset of 10 zip codes on my machine, so I would estimate that the full data would take about 55.6 times longer, or about 35 seconds (the exact times are printed above).\n",
+        "\n",
+        "    b. Full calculation\n"
+      ],
+      "id": "a22f58dd"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "data_for_join = zips_texas_centroids[[\"ZCTA5\", \"geometry\"]]\n",
+        "\n",
+        "start_time = time.time()\n",
+        "join_to_hospital = gpd.sjoin_nearest(\n",
+        "    data_for_join,\n",
+        "    zips_withhospital_centroids,\n",
+        "    how='inner',\n",
+        "    distance_col=\"distance_hospital\")\n",
+        "end_time = time.time()\n",
+        "\n",
+        "elapsed_time = end_time - start_time\n",
+        "print(elapsed_time)"
+      ],
+      "id": "33319732",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The full calculation took 310s, which is almost 10 times larger than my estimate. \n",
+        "\n",
+        "    c. Units\n"
+      ],
+      "id": "054b4610"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "avg_dist_hospital = join_to_hospital.groupby(\n",
+        "    'ZCTA5_left')['distance_hospital'].mean(\n",
+        ").reset_index()\n",
+        "\n",
+        "# Sort by descending for rendering purposes\n",
+        "avg_dist_hospital_2 = avg_dist_hospital.sort_values(\n",
+        "    by='distance_hospital', ascending=False)\n",
+        "avg_dist_hospital_2.head()"
+      ],
+      "id": "762f5822",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The first 10 results are printed above. The units are degrees (of latitude).\n",
+        "\n",
+        "    b. Convert to miles. Makes sense?\n"
+      ],
+      "id": "fd7308ee"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "avg_dist_hospital['distance_hospital_miles'] = avg_dist_hospital[\n",
+        "    'distance_hospital'] * 69\n",
+        "avg_dist_hospital = avg_dist_hospital.rename(columns={'ZCTA5_left': 'ZCTA5'})\n",
+        "\n",
+        "np.mean(avg_dist_hospital['distance_hospital_miles'])"
+      ],
+      "id": "0a49a28e",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The average distance to a hospital shows as 2.75 miles. This value does not make sense and is not entirely correct because we are assuming that within zip code distance is 0 miles. Zip code areas can range from small to large and it could be the case that someone lives 10 miles away, but in the same zip code, and they are still being classified as 0 miles. This number is grossly underprojected. \n",
+        "\n",
+        "    c. Map the value for each zip. \n"
+      ],
+      "id": "4b0df520"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "avg_per_zip = zips_texas_centroids.merge(\n",
+        "    avg_dist_hospital,\n",
+        "    on = 'ZCTA5',\n",
+        "    how='left')"
+      ],
+      "id": "cf6f1ee6",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Plot Texas. ChatGPT was used for assistance on the colors and \n",
+        "# how to save as png\n",
+        "avg_per_zip.plot(column='distance_hospital_miles', cmap='RdBu_r', legend=True)\n",
+        "plt.title(\"Average Distance to Nearest Hospital in Texas\")\n",
+        "plt.axis('off')\n",
+        "plt.savefig(\"texas_map.png\", format='png', bbox_inches='tight', dpi=300)"
+      ],
+      "id": "2a33a9b9",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Effects of closures on access in Texas (15 pts)\n",
+        "\n",
+        "1. Using the corrected hospital closures dataset from the first section, create a list of directly affected zip codes in Texas – that is, those with at least one closure in 2016-2019. Display a table of the number of zip codes vs. the number of closures they experienced.\n",
+        "\n",
+        "\n",
+        "Returning to the corrected_closures data from the last section, we have 82 hospitals whose zips we will pull:"
+      ],
+      "id": "9d79b83e"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "zip_closures = corrected_closures.groupby(\"zip_code\").size(\n",
+        "\n",
+        ").reset_index()\n",
+        "\n",
+        "zip_closures['zip_code'] = zip_closures['zip_code'].astype(\n",
+        "    str).str.split('.').str[0].str.zfill(5)\n",
+        "\n",
+        "zip_closures.columns = [\"zip_code\", \"closures\"]\n",
+        "zip_closures.sort_values(\"closures\", ascending=False).head(10)\n"
+      ],
+      "id": "4f48996d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "2. Plot a choropleth of which Texas zip codes were directly affected by a closure in 2016-2019 – there was at least one closure within the zip code. How many directly affected zip codes are there in Texas?\n",
+        "\n",
+        "\n",
+        "To do this, we will again merge the tx_zip_codes data with our table from above:\n"
+      ],
+      "id": "1e01bf15"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "tx_hospital_closures = tx_zip_codes.merge(zip_closures,\n",
+        "                                          left_on=\"ZCTA5\", \n",
+        "                                          right_on=\"zip_code\", \n",
+        "                                          how=\"left\")\n",
+        "\n",
+        "# This line replaces NAs from the merge with zeroes- \n",
+        "# because zip codes not on our zip_closures list have 0 closures\n",
+        "tx_hospital_closures['closures'] = tx_hospital_closures[\n",
+        "    'closures'].fillna(0).astype(int)\n",
+        "\n",
+        "tx_hospital_closures.plot(\n",
+        "    column='closures',\n",
+        "    cmap='Reds',\n",
+        ")\n",
+        "plt.title(\"Zip Codes With Hospital Closures in Texas, 2016-2019\")\n",
+        "plt.axis('off')\n",
+        "\n",
+        "plt.show()"
+      ],
+      "id": "368db12b",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "print(f\"There were {len(zip_closures)} directly \\\n",
+        "    affected zip codes in Texas during this period.\")"
+      ],
+      "id": "e844fda0",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#test code\n",
+        "tx_hospital_closures.sort_values(\"closures\", ascending=False).head()"
+      ],
+      "id": "60fa8fbd",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "3. Then identify all the indirectly affected zip codes: Texas zip codes within a 10-mile radius of the directly affected zip codes. To do so, first create a GeoDataFrame of the directly affected zip codes. Then create a 10-mile buffer around them. Then, do a spatial join with the overall Texas zip code shapefile. How many indirectly affected zip codes are there in Texas?\n"
+      ],
+      "id": "2badff8e"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Buffer is measured in meters, so 10 meters is\n",
+        "# approx. 16,100 meters\n",
+        "# Our directly affected zipcodes geodataframe\n",
+        "# is tx_hospital_closures\n",
+        "\n",
+        "# First turn zip_closures into a geodataframe,\n",
+        "# not a dataframe\n",
+        "\n",
+        "zip_closures_geo = tx_zip_codes.merge(zip_closures, left_on=\"ZCTA5\", right_on=\"zip_code\", how=\"inner\",\n",
+        "                                      suffixes=(\"_tx\", \"_closure\"))\n",
+        "zip_closures_geo = zip_closures_geo.set_geometry(\n",
+        "    'geometry')\n",
+        "\n",
+        "tx_zip_codes = tx_zip_codes.to_crs(epsg=3857)\n",
+        "zip_closures_geo = zip_closures_geo.to_crs(epsg=3857)\n",
+        "\n",
+        "\n",
+        "# Need to store the buffer result in a new GeoDataFrame\n",
+        "zip_closures_geo['buffered_geometry'] = zip_closures_geo.geometry.buffer(\n",
+        "    16093.4)\n",
+        "buffer_zone = zip_closures_geo.set_geometry('buffered_geometry')\n",
+        "\n",
+        "# Spatial join\n",
+        "spatial_join = gpd.sjoin(tx_zip_codes, buffer_zone,\n",
+        "                         how=\"inner\", predicate=\"intersects\",\n",
+        "                         lsuffix=\"_left\", rsuffix=\"_right\")"
+      ],
+      "id": "7445a761",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "num_indirectly_affected = spatial_join['ZCTA5__left'].nunique()\n",
+        "print(f\"Number of indirectly affected zip codes: {num_indirectly_affected}\")"
+      ],
+      "id": "88033642",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "4. Make a choropleth plot of the Texas zip codes with a different color for each of the 3 categories: directly affected by a closure, within 10 miles of closure but\n",
+        "not directly affected, or not affected.\n",
+        "\n",
+        "To do this, we need to go back to tx_zip_codes and classify each zip code in one of the three categories:\n"
+      ],
+      "id": "534e9418"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Create a new status column and set all to Not Affected at first,\n",
+        "# then edit specific zips to be affected later\n",
+        "tx_zip_codes['status'] = \"Not Affected\"\n",
+        "\n",
+        "# Directly affected\n",
+        "directly_affected_zips = zip_closures_geo['ZCTA5'].unique()\n",
+        "tx_zip_codes.loc[tx_zip_codes['ZCTA5'].isin(\n",
+        "    directly_affected_zips), 'status'] = 'Directly Affected'\n",
+        "print(\"Directly affected zips:\", directly_affected_zips)\n",
+        "\n",
+        "# Indirectly affected (but not directly affected)\n",
+        "# This will require a spatial join\n",
+        "# Perform the spatial join and rename the column immediately after for consistency\n",
+        "spatial_join_df = gpd.sjoin(\n",
+        "    tx_zip_codes, buffer_zone, how=\"inner\", predicate=\"intersects\")\n",
+        "spatial_join_df = spatial_join_df.rename(columns={'ZCTA5_left': 'ZCTA5'})\n",
+        "\n",
+        "indirectly_affected_zips = spatial_join_df['ZCTA5'].unique()\n",
+        "\n",
+        "# Filter out directly affected zip codes and update 'status'\n",
+        "indirectly_affected_filtered = [\n",
+        "    z for z in indirectly_affected_zips if z not in directly_affected_zips]\n",
+        "tx_zip_codes.loc[tx_zip_codes['ZCTA5'].isin(\n",
+        "    indirectly_affected_filtered), 'status'] = 'Indirectly Affected'\n",
+        "\n",
+        "# Plot the plots with tx_zip_code and status\n",
+        "\n",
+        "fig, ax = plt.subplots()\n",
+        "tx_zip_codes.plot(column='status', cmap='Set1', legend=True, ax=ax)\n",
+        "\n",
+        "legend = ax.get_legend()\n",
+        "if legend:\n",
+        "    legend.set_title(\"Zip Code Status\")\n",
+        "\n",
+        "plt.title(\"Texas Zip Codes by Affected Status\")\n",
+        "plt.axis(\"off\")\n",
+        "plt.show()"
+      ],
+      "id": "29fd5f9d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Reflecting on the exercise (10 pts) \n",
+        "\n",
+        "1a. Potential issues: we can only measure \"true closure\", by that definition above, for hospitals who were suspected to close in 2017 or 2018. This is because we restricted the data to hospitals active in 2016 (so we're not measuring their potential closings), and we only have data up until 2019 (so we can't use 2020 data to determine if the closings of 2019 were true by the zip codes definition). Besides being limited to 2 years, another issue is that we are looking at total active hospitals in a zip code and using that to determine whether a closure was real. Hypothetically, if a hospital closed and a new one opened, that closure would be counted as fake. Futher, if a hospital closed in one zip code and moved to another (or two from different zips merged into one), we would be counting that as a \"true\" closure, when it was just a relocation that could have been hypothetically down the street, but in a different zip code. Lastly, if a hospital temporarily closed and was then reopened a year later, our methods would count this as a true closure, when that may no the case. Better way: One solution is to look at clusters of zip codes. For example, instead of just looking at closures in 1 zip code, we can merge each zip code with each bordering zip code to create clusters which could avoid the issues of mergers or short relocations. We could also use the other hospital types to avoid a potential issue of a hospital reclasifying from short-term to something else, but still existing. \n",
+        "\n",
+        "2. Classifying zip codes as 'directly affected', 'indirectly affected', and 'not affected' with a threshold of 10 miles does do the a good job of reflecting changes in zip-code-level access to hospitals. From a google search, it's apparent that the average distance to a hospital in the United States is about 10 miles in rural areas (which is likely how this number was derived). To improve this measure, we would have to calculate the average and max distance to a hospital in each zip code and make those the parameters (average or less is directly affected, average to max is indirectly affected, max or more is not affected). This would be tailored to each zip code and would give us a better representation of the changes in access per zip code while taking into account their differences. "
+      ],
+      "id": "6a820d18"
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "python3",
+      "language": "python",
+      "display_name": "Python 3 (ipykernel)",
+      "path": "C:\\Users\\jakub\\AppData\\Roaming\\Python\\share\\jupyter\\kernels\\python3"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
