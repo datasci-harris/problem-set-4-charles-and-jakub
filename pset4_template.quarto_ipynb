@@ -14,7 +14,7 @@
         "  echo: true\n",
         "---"
       ],
-      "id": "21f7a034"
+      "id": "9e5305f1"
     },
     {
       "cell_type": "code",
@@ -24,7 +24,7 @@
         "import warnings\n",
         "warnings.filterwarnings(\"ignore\")"
       ],
-      "id": "d0db9114",
+      "id": "a11118f8",
       "execution_count": null,
       "outputs": []
     },
@@ -57,7 +57,7 @@
         "\n",
         "2. Import the pos2016.csv file and subset it:\n"
       ],
-      "id": "c25227d1"
+      "id": "f2d906b5"
     },
     {
       "cell_type": "code",
@@ -85,7 +85,7 @@
         "\n",
         "df = df[(df[\"prvdr_category_code\"] == 1) & (df[\"prvdr_subtype_code\"] == 1)]"
       ],
-      "id": "3765731b",
+      "id": "de6300e4",
       "execution_count": null,
       "outputs": []
     },
@@ -104,7 +104,7 @@
         "\n",
         "3. Repeat the previous steps with 2017Q4, 2018Q4, and 2019Q4 and then append them together: \n"
       ],
-      "id": "929ff875"
+      "id": "5dd45a7f"
     },
     {
       "cell_type": "code",
@@ -147,7 +147,7 @@
         "\n",
         "df_all = pd.concat([df, df_2017, df_2018, df_2019], ignore_index=True)"
       ],
-      "id": "14764139",
+      "id": "84eae7a0",
       "execution_count": null,
       "outputs": []
     },
@@ -157,7 +157,7 @@
       "source": [
         "Now we plot the # of observations in the dataset by year of certification date:\n"
       ],
-      "id": "1f1b3242"
+      "id": "d3750422"
     },
     {
       "cell_type": "code",
@@ -175,7 +175,7 @@
         "\n",
         "observations_by_year.save('observations_by_year.png')"
       ],
-      "id": "edf9dfed",
+      "id": "1c9441c9",
       "execution_count": null,
       "outputs": []
     },
@@ -188,7 +188,7 @@
         "4. \n",
         "a. Now we repeat the previous step but this time plot unique hospitals by year instead of just observations:\n"
       ],
-      "id": "749aea00"
+      "id": "560420af"
     },
     {
       "cell_type": "code",
@@ -205,7 +205,7 @@
         "\n",
         "unique_hospitals_by_year.save('unique_hospitals_by_year.png')"
       ],
-      "id": "14ed0b77",
+      "id": "d9bd2101",
       "execution_count": null,
       "outputs": []
     },
@@ -222,7 +222,7 @@
         "\n",
         "## Identify hospital closures in POS file (15 pts) (*)\n"
       ],
-      "id": "d9048753"
+      "id": "25dad54b"
     },
     {
       "cell_type": "code",
@@ -233,7 +233,7 @@
         "import geopandas as gpd\n",
         "import matplotlib as plt"
       ],
-      "id": "1cdd879c",
+      "id": "6de501b6",
       "execution_count": null,
       "outputs": []
     },
@@ -251,7 +251,7 @@
         "\n",
         "1. Create a list of hospitals active in 2016, closed by 2019 (facility name, zip, year of closure). How many are there?\n"
       ],
-      "id": "6577c80d"
+      "id": "c570f0b2"
     },
     {
       "cell_type": "code",
@@ -273,7 +273,7 @@
         "#These are the hospitals in our dataset that closed in 2017-2018.\n",
         "print(f\"There are {len(closed_in_1718)} hospitals that closed during this period.\")"
       ],
-      "id": "b139157c",
+      "id": "c0579b8e",
       "execution_count": null,
       "outputs": []
     },
@@ -284,7 +284,7 @@
         "2. Sort this list of hospitals by name and report the names and year of\n",
         "suspected closure for the first 10 rows.\n"
       ],
-      "id": "e5235007"
+      "id": "55c283dc"
     },
     {
       "cell_type": "code",
@@ -294,7 +294,7 @@
         "\n",
         "closed_in_1718.head(10)"
       ],
-      "id": "c9378270",
+      "id": "f430debf",
       "execution_count": null,
       "outputs": []
     },
@@ -307,7 +307,7 @@
         "\n",
         "3. However, not all suspected hospital closures are true closures. For example, in the case of a merger, a CMS certification number will be appear to be “terminated,” but then the hospital re-appear under a similar name/address with a new CMS certification number in the next year. As a first pass to address this, remove any suspected hospital closures that are in zip codes where the number of active hospitals does not decrease in the year after the suspected closure.\n"
       ],
-      "id": "07573f68"
+      "id": "67b6b950"
     },
     {
       "cell_type": "code",
@@ -341,7 +341,7 @@
         "ah_2018 = active_hospital_summaries['active_hospitals_2018']\n",
         "ah_2019 = active_hospital_summaries['active_hospitals_2019']"
       ],
-      "id": "53496158",
+      "id": "3416a0c9",
       "execution_count": null,
       "outputs": []
     },
@@ -352,7 +352,7 @@
         "Now we need to use these tables to create a way for us to check: when we provide our function a hospital closure, how can our function check to see if it was in a zip code where the number of active hospitals did not decrease the year after its closure?\n",
         "We can do this by taking our summary tables and merging them:\n"
       ],
-      "id": "a1e3f500"
+      "id": "f810ac3f"
     },
     {
       "cell_type": "code",
@@ -379,7 +379,7 @@
         "comp_2018_2019['did_decrease'] = (\n",
         "    comp_2018_2019['active_2017'] > comp_2018_2019['active_2018']).astype(int)"
       ],
-      "id": "7d1065cd",
+      "id": "bd46d716",
       "execution_count": null,
       "outputs": []
     },
@@ -389,7 +389,7 @@
       "source": [
         "Now we have our two comparison tables, so let's write a function that goes through closed_in_1718 that does the following:\n"
       ],
-      "id": "fdd32435"
+      "id": "5d26394f"
     },
     {
       "cell_type": "code",
@@ -437,7 +437,7 @@
         "\n",
         "decreasing_zipcodes = check_zip(closed_in_1718, comp_2017_2018, comp_2018_2019)"
       ],
-      "id": "8084a6cf",
+      "id": "6160c67b",
       "execution_count": null,
       "outputs": []
     },
@@ -447,7 +447,7 @@
       "source": [
         "  a. Now we have a list of decreasing zipcodes, these are likely mergers/acquisitions:\n"
       ],
-      "id": "753f0f2e"
+      "id": "d1dfc0d0"
     },
     {
       "cell_type": "code",
@@ -457,7 +457,7 @@
       "source": [
         "print(len(decreasing_zipcodes))"
       ],
-      "id": "0947e904",
+      "id": "53fec2bf",
       "execution_count": null,
       "outputs": []
     },
@@ -473,7 +473,7 @@
         "\n",
         "  c. Sort this list of corrected hospital closures by name and report the first 10 rows.\n"
       ],
-      "id": "6600b9f0"
+      "id": "8b2d231a"
     },
     {
       "cell_type": "code",
@@ -491,7 +491,7 @@
         "corrected_closures_2 = corrected_closures[['facility_name','zip_code','year']]\n",
         "corrected_closures_2.head(10)"
       ],
-      "id": "a06c7b86",
+      "id": "95b33f7f",
       "execution_count": null,
       "outputs": []
     },
@@ -517,7 +517,7 @@
         "\n",
         "2. To open the shapefile, we will install and use geopandas:\n"
       ],
-      "id": "3821dd69"
+      "id": "d6c98678"
     },
     {
       "cell_type": "code",
@@ -532,7 +532,7 @@
         "tx_zip_codes = zip_codes[\n",
         "    zip_codes[\"ZCTA5\"].str.startswith(('75', '76', '77', '78', '79'))]"
       ],
-      "id": "36dac240",
+      "id": "bef554a8",
       "execution_count": null,
       "outputs": []
     },
@@ -543,7 +543,7 @@
         "Now we calculate the # of hospitals per zip code in 2016 based on the previous step:\n",
         "(note: we are using the entire dataset of hospitals short term and active in 2016- this is the initial df file from Q4 2016)\n"
       ],
-      "id": "7a1b2cf3"
+      "id": "d38738c5"
     },
     {
       "cell_type": "code",
@@ -564,7 +564,7 @@
         "texas_summary_2016.columns = ['zip_code', 'hospital_count']\n",
         "print(texas_summary_2016.sort_values(by=\"hospital_count\", ascending=False))"
       ],
-      "id": "5aa3c626",
+      "id": "a8560930",
       "execution_count": null,
       "outputs": []
     },
@@ -574,7 +574,7 @@
       "source": [
         "Now we will create a choropleth of the hospitals in Texas by zip code:\n"
       ],
-      "id": "82204a6b"
+      "id": "49a48b21"
     },
     {
       "cell_type": "code",
@@ -604,7 +604,7 @@
         "plt.axis('off')\n",
         "plt.savefig(\"texas_zip_map.png\", format='png', bbox_inches='tight', dpi=300)"
       ],
-      "id": "91523c99",
+      "id": "4c4ed3ac",
       "execution_count": null,
       "outputs": []
     },
@@ -616,7 +616,7 @@
         "\n",
         "1. GeoDataFrame for centroid of each zip code nationally, dimensions, columns. \n"
       ],
-      "id": "b2b82c50"
+      "id": "afbbc36a"
     },
     {
       "cell_type": "code",
@@ -627,7 +627,7 @@
         "zips_all_centroids.total_bounds\n",
         "print(zips_all_centroids.columns)"
       ],
-      "id": "9d0a243a",
+      "id": "d26fccd2",
       "execution_count": null,
       "outputs": []
     },
@@ -644,7 +644,7 @@
         "\n",
         "2. Subset above into texas & texas or bordering state. \n"
       ],
-      "id": "74183352"
+      "id": "4f887b49"
     },
     {
       "cell_type": "code",
@@ -664,7 +664,7 @@
         "    'ZCTA5'].isin(tx_border_zip_codes_list)]\n",
         "print(len(zips_texas_borderstates_centroids))"
       ],
-      "id": "1f69cb48",
+      "id": "b019dfbd",
       "execution_count": null,
       "outputs": []
     },
@@ -676,7 +676,7 @@
         "\n",
         "3. Subset that contains at least 1 hospital\n"
       ],
-      "id": "a9256adf"
+      "id": "880feed1"
     },
     {
       "cell_type": "code",
@@ -704,7 +704,7 @@
         "    'zip_code': 'zip_code_2016'})\n",
         "df_terms = df_terms[df_terms['termination_code_2016'] == '0']"
       ],
-      "id": "24c39073",
+      "id": "f55383c3",
       "execution_count": null,
       "outputs": []
     },
@@ -722,7 +722,7 @@
         "    active_2016, left_on='ZCTA5', right_on='zip_code_2016', how='inner')\n",
         "print(len(zips_withhospital_centroids))"
       ],
-      "id": "780a5f46",
+      "id": "3bc629f3",
       "execution_count": null,
       "outputs": []
     },
@@ -735,7 +735,7 @@
         "4. Calculate distance to nearest zip code w hospital.\n",
         "    a. Subset to 10 & time it. Estimate total time. \n"
       ],
-      "id": "b3ea0d26"
+      "id": "ce00dbcf"
     },
     {
       "cell_type": "code",
@@ -760,7 +760,7 @@
         "full_estimate = elapsed_time_10 * (556/10)\n",
         "print(full_estimate)"
       ],
-      "id": "4b8b1dd7",
+      "id": "528ddd25",
       "execution_count": null,
       "outputs": []
     },
@@ -772,7 +772,7 @@
         "\n",
         "    b. Full calculation\n"
       ],
-      "id": "a22f58dd"
+      "id": "9db233a7"
     },
     {
       "cell_type": "code",
@@ -791,7 +791,7 @@
         "elapsed_time = end_time - start_time\n",
         "print(elapsed_time)"
       ],
-      "id": "33319732",
+      "id": "99678229",
       "execution_count": null,
       "outputs": []
     },
@@ -803,7 +803,7 @@
         "\n",
         "    c. Units\n"
       ],
-      "id": "054b4610"
+      "id": "eb50325f"
     },
     {
       "cell_type": "code",
@@ -818,7 +818,7 @@
         "    by='distance_hospital', ascending=False)\n",
         "avg_dist_hospital_2.head()"
       ],
-      "id": "762f5822",
+      "id": "9c879074",
       "execution_count": null,
       "outputs": []
     },
@@ -830,7 +830,7 @@
         "\n",
         "    b. Convert to miles. Makes sense?\n"
       ],
-      "id": "fd7308ee"
+      "id": "268dc096"
     },
     {
       "cell_type": "code",
@@ -842,7 +842,7 @@
         "\n",
         "np.mean(avg_dist_hospital['distance_hospital_miles'])"
       ],
-      "id": "0a49a28e",
+      "id": "dbab9696",
       "execution_count": null,
       "outputs": []
     },
@@ -854,7 +854,7 @@
         "\n",
         "    c. Map the value for each zip. \n"
       ],
-      "id": "4b0df520"
+      "id": "2f582a17"
     },
     {
       "cell_type": "code",
@@ -865,7 +865,7 @@
         "    on = 'ZCTA5',\n",
         "    how='left')"
       ],
-      "id": "cf6f1ee6",
+      "id": "fec08ca1",
       "execution_count": null,
       "outputs": []
     },
@@ -880,7 +880,7 @@
         "plt.axis('off')\n",
         "plt.savefig(\"texas_map.png\", format='png', bbox_inches='tight', dpi=300)"
       ],
-      "id": "2a33a9b9",
+      "id": "4cf9b9a8",
       "execution_count": null,
       "outputs": []
     },
@@ -895,7 +895,7 @@
         "\n",
         "Returning to the corrected_closures data from the last section, we have 82 hospitals whose zips we will pull:"
       ],
-      "id": "9d79b83e"
+      "id": "e51f2440"
     },
     {
       "cell_type": "code",
@@ -911,7 +911,7 @@
         "zip_closures.columns = [\"zip_code\", \"closures\"]\n",
         "zip_closures.sort_values(\"closures\", ascending=False).head(10)\n"
       ],
-      "id": "4f48996d",
+      "id": "be8863ed",
       "execution_count": null,
       "outputs": []
     },
@@ -924,7 +924,7 @@
         "\n",
         "To do this, we will again merge the tx_zip_codes data with our table from above:\n"
       ],
-      "id": "1e01bf15"
+      "id": "8aa4d7f8"
     },
     {
       "cell_type": "code",
@@ -949,7 +949,7 @@
         "\n",
         "plt.show()"
       ],
-      "id": "368db12b",
+      "id": "9bd795a2",
       "execution_count": null,
       "outputs": []
     },
@@ -960,7 +960,7 @@
         "print(f\"There were {len(zip_closures)} directly \\\n",
         "    affected zip codes in Texas during this period.\")"
       ],
-      "id": "e844fda0",
+      "id": "0d0623c7",
       "execution_count": null,
       "outputs": []
     },
@@ -971,7 +971,7 @@
         "#test code\n",
         "tx_hospital_closures.sort_values(\"closures\", ascending=False).head()"
       ],
-      "id": "60fa8fbd",
+      "id": "42065ab3",
       "execution_count": null,
       "outputs": []
     },
@@ -981,7 +981,7 @@
       "source": [
         "3. Then identify all the indirectly affected zip codes: Texas zip codes within a 10-mile radius of the directly affected zip codes. To do so, first create a GeoDataFrame of the directly affected zip codes. Then create a 10-mile buffer around them. Then, do a spatial join with the overall Texas zip code shapefile. How many indirectly affected zip codes are there in Texas?\n"
       ],
-      "id": "2badff8e"
+      "id": "76ca0c2a"
     },
     {
       "cell_type": "code",
@@ -1014,7 +1014,7 @@
         "                         how=\"inner\", predicate=\"intersects\",\n",
         "                         lsuffix=\"_left\", rsuffix=\"_right\")"
       ],
-      "id": "7445a761",
+      "id": "354ef85c",
       "execution_count": null,
       "outputs": []
     },
@@ -1025,7 +1025,7 @@
         "num_indirectly_affected = spatial_join['ZCTA5__left'].nunique()\n",
         "print(f\"Number of indirectly affected zip codes: {num_indirectly_affected}\")"
       ],
-      "id": "88033642",
+      "id": "79f02007",
       "execution_count": null,
       "outputs": []
     },
@@ -1038,7 +1038,7 @@
         "\n",
         "To do this, we need to go back to tx_zip_codes and classify each zip code in one of the three categories:\n"
       ],
-      "id": "534e9418"
+      "id": "a7b09c28"
     },
     {
       "cell_type": "code",
@@ -1082,7 +1082,7 @@
         "plt.axis(\"off\")\n",
         "plt.show()"
       ],
-      "id": "29fd5f9d",
+      "id": "83226088",
       "execution_count": null,
       "outputs": []
     },
@@ -1096,7 +1096,7 @@
         "\n",
         "2. Classifying zip codes as 'directly affected', 'indirectly affected', and 'not affected' with a threshold of 10 miles does do the a good job of reflecting changes in zip-code-level access to hospitals. From a google search, it's apparent that the average distance to a hospital in the United States is about 10 miles in rural areas (which is likely how this number was derived). To improve this measure, we would have to calculate the average and max distance to a hospital in each zip code and make those the parameters (average or less is directly affected, average to max is indirectly affected, max or more is not affected). This would be tailored to each zip code and would give us a better representation of the changes in access per zip code while taking into account their differences. "
       ],
-      "id": "6a820d18"
+      "id": "25fd9ffb"
     }
   ],
   "metadata": {

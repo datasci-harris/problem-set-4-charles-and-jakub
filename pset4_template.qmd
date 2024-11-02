@@ -645,8 +645,6 @@ zip_closures['zip_code'] = zip_closures['zip_code'].astype(
 zip_closures.columns = ["zip_code", "closures"]
 zip_closures.sort_values("closures", ascending=False).head(10)
 
-
-
 ```
 
 
@@ -674,8 +672,7 @@ tx_hospital_closures.plot(
 )
 plt.title("Zip Codes With Hospital Closures in Texas, 2016-2019")
 plt.axis('off')
-
-plt.show()
+plt.savefig("texas_closures.png", format='png', bbox_inches='tight', dpi=300)
 
 ```
 
@@ -774,7 +771,7 @@ if legend:
 
 plt.title("Texas Zip Codes by Affected Status")
 plt.axis("off")
-plt.show()
+plt.savefig("texas_affected.png", format='png', bbox_inches='tight', dpi=300)
 ```
 
 ## Reflecting on the exercise (10 pts) 
