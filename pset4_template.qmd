@@ -488,41 +488,6 @@ print(f"Number of indirectly affected zip codes: {num_indirectly_affected}")
 ```
 
 
-```{python}
-#Test Cell
-
-print(spatial_join.columns)
-
-```
-
-```{python}
-
-#TEST CODE ONLY, DO NOT INCLUDE IN FINAL
-
-import matplotlib.pyplot as plt
-
-# Create a plot to visualize the buffer zones and zip codes
-fig, ax = plt.subplots(figsize=(10, 10))
-
-# Plot all Texas zip codes in light gray for context
-tx_zip_codes.plot(ax=ax, color="lightgrey", edgecolor="white", label="All Texas Zip Codes")
-
-# Plot the buffer zones around directly affected zip codes in red with some transparency
-buffer_zone.plot(ax=ax, color="red", alpha=0.5, edgecolor="black", label="10-Mile Buffer Zone (Directly Affected)")
-
-# Optionally, plot the directly affected zip codes themselves
-zip_closures_geo.plot(ax=ax, color="blue", marker='o', label="Directly Affected Zip Codes")
-
-# Add a legend and title
-plt.legend()
-plt.title("Directly and Indirectly Affected Zip Codes in Texas (10-Mile Buffer Zone)")
-plt.axis("off")  # Hide axis for better visualization
-plt.show()
-
-```
-
-
-
 
 4. Make a choropleth plot of the Texas zip codes with a different color for each of the 3 categories: directly affected by a closure, within 10 miles of closure but
 not directly affected, or not affected.
