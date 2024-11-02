@@ -342,7 +342,7 @@ texas_df_2016 = df[df['zip_code'].astype(str).str.startswith(('75', '76', '77', 
 
 texas_summary_2016 =  texas_df_2016.groupby('zip_code').size().reset_index()
 
-#Remove trailing decimal points from zip code
+#Remove trailing decimal points from zip code and convert it to string. Attribution: ChatGPT suggested using zfill() to strip the decimal point
 texas_summary_2016['zip_code'] = texas_summary_2016['zip_code'].astype(str).str.split('.').str[0].str.zfill(5)
 
 texas_summary_2016.columns = ['zip_code', 'hospital_count']
@@ -370,10 +370,6 @@ tx_zip_hospitals['hospital_count'] = tx_zip_hospitals['hospital_count'].fillna(0
 
 #Attribution: ChatGPT suggested defining custom bins to make it easier to differentiate regions
 
-
-tx_zip_hospitals.plot(column='hospital_count',
-cmap='PuBu',
-legend=True)
 
 tx_zip_hospitals.plot(
     column='hospital_count',
@@ -407,8 +403,32 @@ plt.show()
     
 ## Effects of closures on access in Texas (15 pts)
 
-1. 
-2. 
+1. Using the corrected hospital closures dataset from the first section, create a list of directly affected zip codes in Texas – that is, those with at least one closure in 2016-2019. Display a table of the number of zip codes vs. the number of closures they experienced.
+
+
+Returning to the corrected_closures data from the last section, we have 82 hospitals whose zips we will pull:
+```{python}
+
+zip_closures = corrected_closures.groupby("zip_code").size().reset_index()
+
+zip_closures['zip_code'] = zip_closures['zip_code'].astype(str).str.split('.').str[0].str.zfill(5)
+
+zip_closures.columns = ["zip_code", "closures"]
+zip_closures.sort_values("closures", ascending=False).head(10)
+
+len(zip_closures)
+
+
+```
+
+
+2. Plot a choropleth of which Texas zip codes were directly affected by a closure in 2016-2019 – there was at least one closure within the zip code. How many directly affected zip codes are there in Texas?
+
+```{python}
+
+
+```
+
 3. 
 4. 
 
