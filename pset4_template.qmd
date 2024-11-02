@@ -36,6 +36,7 @@ include-before-body:
   -subtype 1 (PRVDR_CTGRY_SBTYP_CD)
   -CMS Certification number (PRVDR_NUM)
   -Termination Code (PGM_TRMNTN_CD)
+  -Termination Date (TRMNTN_EXPRTN_DT)
   -Facility Name (FAC_NAME)
   -Facility Zip (ZIP_CD)
 
